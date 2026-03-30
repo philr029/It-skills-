@@ -15,11 +15,11 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg-deep:     #0f0b1a;
-      --bg-mid:      #1a1528;
-      --bg-card:     rgba(26, 21, 40, 0.7);
+      --bg-deep:     #0c0a15;
+      --bg-mid:      #13101f;
+      --bg-card:     rgba(19, 16, 31, 0.72);
       --accent:      #a78bfa;
-      --accent-dark: #7c3aed;
+      --accent-dark: #8b5cf6;
       --accent-glow: rgba(167, 139, 250, 0.25);
       --accent-glow-strong: rgba(167, 139, 250, 0.45);
       --text-primary: #f0eaff;
@@ -76,18 +76,27 @@
       gap: 8px;
       font-size: 0.75rem;
       font-weight: 600;
-      letter-spacing: 0.15em;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
       color: var(--accent);
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
     .section-label::before {
       content: '';
       display: block;
-      width: 24px;
+      width: 28px;
       height: 2px;
-      background: var(--accent);
+      background: linear-gradient(90deg, var(--accent-dark), var(--accent));
       border-radius: 2px;
+    }
+    .section-label::after {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.6;
     }
 
     .section-title {
@@ -109,14 +118,14 @@
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
     }
     .glass:hover {
       border-color: var(--border-hover);
-      box-shadow: 0 0 32px var(--accent-glow);
-      transform: translateY(-3px);
+      box-shadow: 0 0 40px var(--accent-glow), 0 8px 32px rgba(0,0,0,0.4);
+      transform: translateY(-4px);
     }
 
     /* Buttons */
@@ -136,11 +145,11 @@
     .btn-primary {
       background: linear-gradient(135deg, var(--accent-dark), var(--accent));
       color: #fff;
-      box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
     }
     .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 28px rgba(124, 58, 237, 0.55);
+      box-shadow: 0 8px 28px rgba(139, 92, 246, 0.55);
     }
     .btn-outline {
       background: transparent;
@@ -177,7 +186,7 @@
       top: 0; left: 0; right: 0;
       z-index: 1000;
       padding: 16px 0;
-      background: rgba(15, 11, 26, 0.65);
+      background: rgba(12, 10, 21, 0.65);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid transparent;
@@ -185,7 +194,7 @@
     }
     #navbar.scrolled {
       border-color: var(--border);
-      background: rgba(15, 11, 26, 0.88);
+      background: rgba(12, 10, 21, 0.92);
       padding: 10px 0;
     }
 
@@ -307,7 +316,7 @@
     }
     .blob-1 {
       width: 600px; height: 600px;
-      background: radial-gradient(circle, #7c3aed 0%, transparent 70%);
+      background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
       top: -200px; left: -150px;
       animation-duration: 9s;
     }
@@ -379,7 +388,12 @@
       letter-spacing: -0.03em;
       margin-bottom: 16px;
     }
-    .hero-name .accent { color: var(--accent); }
+    .hero-name .accent {
+      background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 50%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
 
     .hero-role {
       font-size: clamp(1rem, 2.5vw, 1.3rem);
@@ -466,22 +480,35 @@
       flex-direction: column;
       gap: 14px;
       cursor: default;
+      position: relative;
+      overflow: hidden;
     }
+    .service-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-dark), var(--accent), transparent);
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+    .service-card:hover::before { opacity: 1; }
 
     .service-icon {
       width: 52px; height: 52px;
       border-radius: var(--radius-sm);
-      background: linear-gradient(135deg, rgba(124,58,237,0.25), rgba(167,139,250,0.1));
+      background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(167,139,250,0.08));
       border: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.5rem;
+      color: var(--accent);
       transition: all var(--transition);
     }
     .service-card:hover .service-icon {
-      background: linear-gradient(135deg, rgba(124,58,237,0.5), rgba(167,139,250,0.2));
-      box-shadow: 0 0 20px var(--accent-glow);
+      background: linear-gradient(135deg, rgba(139,92,246,0.4), rgba(167,139,250,0.18));
+      box-shadow: 0 0 24px var(--accent-glow);
+      color: #fff;
     }
 
     .service-title {
@@ -541,9 +568,9 @@
       height: 100%;
       width: 0;
       border-radius: 4px;
-      background: linear-gradient(90deg, var(--accent-dark), var(--accent));
-      box-shadow: 0 0 8px var(--accent-glow);
-      transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+      background: linear-gradient(90deg, var(--accent-dark), var(--accent), #c4b5fd);
+      box-shadow: 0 0 10px var(--accent-glow-strong);
+      transition: width 1.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     /* ========================================================
@@ -575,7 +602,7 @@
       background: linear-gradient(135deg, var(--accent-dark), var(--accent));
       border-color: transparent;
       color: #fff;
-      box-shadow: 0 4px 16px rgba(124,58,237,0.35);
+      box-shadow: 0 4px 16px rgba(139,92,246,0.35);
     }
 
     .projects-grid {
@@ -590,7 +617,19 @@
       flex-direction: column;
       gap: 14px;
       transition: all 0.4s ease, opacity 0.4s ease, transform 0.4s ease;
+      position: relative;
+      overflow: hidden;
     }
+    .project-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-dark), var(--accent), transparent);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .project-card:hover::before { opacity: 1; }
     .project-card.hidden {
       opacity: 0;
       transform: scale(0.92);
@@ -608,12 +647,12 @@
     .project-icon-wrap {
       width: 44px; height: 44px;
       border-radius: 10px;
-      background: linear-gradient(135deg, rgba(124,58,237,0.3), rgba(167,139,250,0.15));
+      background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(167,139,250,0.15));
       border: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.2rem;
+      color: var(--accent);
       flex-shrink: 0;
     }
 
@@ -728,8 +767,15 @@
     }
 
     .tool-icon {
-      font-size: 2rem;
-      line-height: 1;
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(167,139,250,0.08));
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      flex-shrink: 0;
     }
 
     .tool-name {
@@ -774,7 +820,10 @@
     .stat-num {
       font-size: clamp(2.2rem, 5vw, 3.5rem);
       font-weight: 800;
-      color: var(--accent);
+      background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 60%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
       font-family: 'Syne Mono', monospace;
       line-height: 1;
       margin-bottom: 8px;
@@ -802,12 +851,12 @@
     .achievement-icon-wrap {
       width: 48px; height: 48px;
       border-radius: var(--radius-sm);
-      background: linear-gradient(135deg, rgba(124,58,237,0.3), rgba(167,139,250,0.1));
+      background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(167,139,250,0.1));
       border: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.3rem;
+      color: var(--accent);
       flex-shrink: 0;
     }
 
@@ -862,7 +911,7 @@
     .contact-link-icon {
       width: 42px; height: 42px;
       border-radius: 10px;
-      background: linear-gradient(135deg, rgba(124,58,237,0.3), rgba(167,139,250,0.1));
+      background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(167,139,250,0.1));
       border: 1px solid var(--border);
       display: flex;
       align-items: center;
@@ -1118,27 +1167,37 @@
 
       <div class="services-grid">
         <div class="glass service-card fade-in fade-in-delay-1">
-          <div class="service-icon">☁️</div>
+          <div class="service-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          </div>
           <div class="service-title">Microsoft 365 Administration</div>
           <div class="service-desc">Full tenant management including Exchange Online, Teams, SharePoint, Entra ID, Intune, and Defender — provisioning, policies, and compliance.</div>
         </div>
         <div class="glass service-card fade-in fade-in-delay-2">
-          <div class="service-icon">🛠️</div>
+          <div class="service-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+          </div>
           <div class="service-title">IT Support &amp; Troubleshooting</div>
           <div class="service-desc">Methodical diagnosis and resolution across hardware, software, and user environments. Fast, documented, and permanently fixed.</div>
         </div>
         <div class="glass service-card fade-in fade-in-delay-3">
-          <div class="service-icon">🔐</div>
+          <div class="service-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          </div>
           <div class="service-title">Security &amp; Threat Monitoring</div>
           <div class="service-desc">SPF, DKIM, DMARC hardening, IP reputation checks, domain security audits, phishing investigation, and Defender alert triage.</div>
         </div>
         <div class="glass service-card fade-in fade-in-delay-4">
-          <div class="service-icon">⚡</div>
+          <div class="service-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          </div>
           <div class="service-title">Automation &amp; Internal Tools</div>
           <div class="service-desc">PowerShell scripts, Python utilities, and web-based tools that eliminate manual overhead and keep operations running smoothly.</div>
         </div>
         <div class="glass service-card fade-in fade-in-delay-5">
-          <div class="service-icon">📊</div>
+          <div class="service-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><path d="M3 20h18"/></svg>
+          </div>
           <div class="service-title">Dynamics 365 &amp; CRM Support</div>
           <div class="service-desc">View and access configuration, lead quality automation, user provisioning, and workflow management within D365 Sales and CE.</div>
         </div>
@@ -1215,21 +1274,27 @@
 
       <div class="achievements-grid">
         <div class="glass achievement-card fade-in fade-in-delay-1">
-          <div class="achievement-icon-wrap">🏆</div>
+          <div class="achievement-icon-wrap">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
           <div class="achievement-text">
             <div class="achievement-title">Eliminated External IT Dependency</div>
             <div class="achievement-desc">Built and maintained internal tooling that made the organisation fully self-sufficient — removing the need for costly external IT contractors.</div>
           </div>
         </div>
         <div class="glass achievement-card fade-in fade-in-delay-2">
-          <div class="achievement-icon-wrap">🛡️</div>
+          <div class="achievement-icon-wrap">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          </div>
           <div class="achievement-text">
             <div class="achievement-title">Hardened Email Security Posture</div>
             <div class="achievement-desc">Reduced phishing exposure through comprehensive SPF, DKIM, and DMARC configuration across all managed domains — with ongoing monitoring dashboards.</div>
           </div>
         </div>
         <div class="glass achievement-card fade-in fade-in-delay-3">
-          <div class="achievement-icon-wrap">🤖</div>
+          <div class="achievement-icon-wrap">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16.01"/><line x1="16" y1="16" x2="16" y2="16.01"/></svg>
+          </div>
           <div class="achievement-text">
             <div class="achievement-title">Automated Lead Quality Checks</div>
             <div class="achievement-desc">Integrated automated lead validation directly into Dynamics 365 workflows, significantly improving CRM data quality and reducing manual review overhead.</div>
@@ -1357,7 +1422,7 @@
 
     const PROJECTS = [
       {
-        icon: '🤖',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16.01"/><line x1="16" y1="16" x2="16" y2="16.01"/></svg>',
         title: 'AI IT Support Assistant',
         desc: 'Conversational AI assistant trained on IT documentation, providing first-line support responses and reducing ticket volume.',
         badge: 'live',
@@ -1365,7 +1430,7 @@
         filters: ['automation', 'tools'],
       },
       {
-        icon: '🛠️',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
         title: 'IT Support Toolkit',
         desc: 'Centralised web-based toolkit consolidating common IT tasks: user lookup, licence checks, device info, and M365 diagnostics.',
         badge: 'live',
@@ -1373,15 +1438,15 @@
         filters: ['m365', 'tools'],
       },
       {
-        icon: '📊',
-        title: 'Dynamics View & Access Analyzer',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>',
+        title: 'Dynamics View &amp; Access Analyzer',
         desc: 'Audits D365 security roles, view access, and permissions across teams — surfacing over-privileged accounts and misconfigured roles.',
         badge: 'live',
         tags: ['Dynamics 365', 'Power Platform', 'JavaScript'],
         filters: ['m365', 'security'],
       },
       {
-        icon: '🔍',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
         title: 'IP Reputation Checker',
         desc: 'Real-time IP reputation lookup aggregating data from VirusTotal, AbuseIPDB, and Shodan. Flags malicious IPs instantly.',
         badge: 'live',
@@ -1389,7 +1454,7 @@
         filters: ['security', 'tools'],
       },
       {
-        icon: '🌐',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
         title: 'Domain Security Checker',
         desc: 'Automated domain security audit checking SPF, DKIM, DMARC, MX, HTTPS, and certificate validity in a single pass.',
         badge: 'live',
@@ -1397,8 +1462,8 @@
         filters: ['security', 'tools'],
       },
       {
-        icon: '📧',
-        title: 'Domain & Email Security Checker',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
+        title: 'Domain &amp; Email Security Checker',
         desc: 'Extended email security auditing including header analysis, BIMI, MTA-STS, and TLS-RPT — with exportable PDF reports.',
         badge: 'live',
         tags: ['HTML/CSS/JS', 'DNS APIs', 'PDF.js'],
@@ -1408,31 +1473,31 @@
 
     const LIVE_TOOLS = [
       {
-        icon: '🛡️',
+        icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
         name: 'Cyber Hub',
         desc: 'Centralised security monitoring dashboard with threat feeds, IP lookups, and incident tracking.',
         href: '#tools',
       },
       {
-        icon: '🌐',
+        icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
         name: 'Domain Security Dashboard',
         desc: 'Live view of SPF, DKIM, DMARC, and certificate status across all monitored domains.',
         href: '#tools',
       },
       {
-        icon: '📋',
+        icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>',
         name: 'Subscription Tracker',
         desc: 'Tracks SaaS subscriptions, renewal dates, costs, and licence utilisation across the organisation.',
         href: '#tools',
       },
       {
-        icon: '🤖',
+        icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16.01"/><line x1="16" y1="16" x2="16" y2="16.01"/></svg>',
         name: 'AI Support Assistant',
         desc: 'AI-powered first-line IT support agent, integrated with the internal knowledge base.',
         href: '#tools',
       },
       {
-        icon: '📡',
+        icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
         name: 'Uptime Monitor',
         desc: 'Lightweight service uptime monitor with alerting, incident history, and status page generation.',
         href: '#tools',
