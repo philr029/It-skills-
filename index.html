@@ -1073,6 +1073,367 @@
       .hero-cta { flex-direction: column; align-items: stretch; }
       .hero-cta .btn { justify-content: center; }
     }
+
+    /* ========================================================
+       PAGE LOAD SEQUENCE
+    ======================================================== */
+    @keyframes pageReveal {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: none; }
+    }
+    @keyframes pageRevealFade {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .pl-logo  { animation: pageReveal 0.55s ease both; animation-delay: 0s; }
+    .pl-nav   { animation: pageReveal 0.55s ease both; animation-delay: 0.12s; }
+    .pl-cta   { animation: pageReveal 0.55s ease both; animation-delay: 0.18s; }
+
+    /* ========================================================
+       HERO CANVAS PARTICLES
+    ======================================================== */
+    #heroCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.55;
+    }
+
+    /* ========================================================
+       SECTION DOT-MATRIX TEXTURE
+    ======================================================== */
+    .dot-bg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(rgba(167,139,250,0.09) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .dot-bg > * { position: relative; z-index: 1; }
+
+    /* ========================================================
+       GLOWING SECTION DIVIDERS
+    ======================================================== */
+    .section-divider {
+      border: none;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, var(--accent-dark) 25%, var(--accent) 50%, var(--accent-dark) 75%, transparent 100%);
+      box-shadow: 0 0 14px 1px var(--accent-glow);
+      margin: 0;
+      opacity: 0.55;
+    }
+
+    /* ========================================================
+       SHIMMER ON SKILL BARS
+    ======================================================== */
+    @keyframes shimmerSweep {
+      0%   { left: -100%; }
+      100% { left: 200%; }
+    }
+    .skill-bar-bg { position: relative; }
+    .skill-bar-fill::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+      border-radius: 4px;
+      animation: none;
+    }
+    .skill-bar-fill.shimmer::after {
+      animation: shimmerSweep 0.75s ease forwards;
+    }
+
+    /* ========================================================
+       SCROLL-TO-TOP BUTTON
+    ======================================================== */
+    #scrollTop {
+      position: fixed;
+      bottom: 32px;
+      right: 28px;
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(139,92,246,0.5);
+      z-index: 900;
+      opacity: 0;
+      transform: translateY(16px) scale(0.85);
+      transition: opacity 0.35s ease, transform 0.35s ease, box-shadow 0.25s ease;
+      pointer-events: none;
+    }
+    #scrollTop.visible {
+      opacity: 1;
+      transform: none;
+      pointer-events: auto;
+    }
+    #scrollTop:hover {
+      box-shadow: 0 6px 28px rgba(139,92,246,0.7);
+      transform: translateY(-3px) scale(1.06);
+    }
+
+    /* ========================================================
+       COMMAND PALETTE
+    ======================================================== */
+    #cmdOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(8,6,16,0.78);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 2000;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 18vh;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s ease;
+    }
+    #cmdOverlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #cmdBox {
+      background: var(--bg-mid);
+      border: 1px solid var(--border-hover);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 40px var(--accent-glow);
+      overflow: hidden;
+      transform: translateY(-12px) scale(0.97);
+      transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+    }
+    #cmdOverlay.open #cmdBox {
+      transform: none;
+    }
+    #cmdSearch {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      padding: 18px 20px;
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      outline: none;
+    }
+    #cmdSearch::placeholder { color: var(--text-dim); }
+    #cmdList {
+      padding: 8px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+    .cmd-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background var(--transition), color var(--transition);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .cmd-item:hover, .cmd-item.selected {
+      background: var(--accent-glow);
+      color: var(--accent);
+    }
+    .cmd-item-icon {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      background: rgba(167,139,250,0.1);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .cmd-hint {
+      padding: 10px 18px;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      display: flex;
+      gap: 16px;
+    }
+    .cmd-hint kbd {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      font-family: 'Syne Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    /* ========================================================
+       3D TILT — project cards
+    ======================================================== */
+    .project-card {
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+    .project-card .tilt-inner {
+      transform: translateZ(12px);
+      display: contents;
+    }
+
+    /* ========================================================
+       AVAILABLE FOR HIRE DOT (hero)
+    ======================================================== */
+    .hero-avail-dot {
+      display: inline-block;
+      width: 10px; height: 10px;
+      background: var(--green);
+      border-radius: 50%;
+      margin-left: 10px;
+      vertical-align: middle;
+      position: relative;
+      animation: hireGlow 1.8s ease-in-out infinite;
+    }
+    @keyframes hireGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.6); }
+      50% { box-shadow: 0 0 0 6px rgba(74,222,128,0); }
+    }
+
+    /* ========================================================
+       SYSTEMS OPERATIONAL — hero
+    ======================================================== */
+    .hero-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--green);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.8;
+      margin-top: 28px;
+    }
+    .hero-status-dot {
+      width: 7px; height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* ========================================================
+       STAGGERED SECTION CHILDREN
+    ======================================================== */
+    .stagger-children > * {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+    .stagger-children.in-view > *:nth-child(1) { opacity: 1; transform: none; transition-delay: 0.05s; }
+    .stagger-children.in-view > *:nth-child(2) { opacity: 1; transform: none; transition-delay: 0.12s; }
+    .stagger-children.in-view > *:nth-child(3) { opacity: 1; transform: none; transition-delay: 0.19s; }
+    .stagger-children.in-view > *:nth-child(4) { opacity: 1; transform: none; transition-delay: 0.26s; }
+    .stagger-children.in-view > *:nth-child(5) { opacity: 1; transform: none; transition-delay: 0.33s; }
+    .stagger-children.in-view > *:nth-child(6) { opacity: 1; transform: none; transition-delay: 0.40s; }
+    .stagger-children.in-view > *:nth-child(n+7) { opacity: 1; transform: none; transition-delay: 0.46s; }
+
+    /* ========================================================
+       MICRO-INTERACTIONS — enhanced
+    ======================================================== */
+    .btn { position: relative; overflow: hidden; }
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.08);
+      opacity: 0;
+      border-radius: inherit;
+      transition: opacity 0.2s;
+    }
+    .btn:active::after { opacity: 1; }
+    .btn:active { transform: translateY(0) scale(0.97) !important; }
+
+    .filter-btn { position: relative; overflow: hidden; }
+    .filter-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.06);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .filter-btn:active::after { opacity: 1; }
+
+    .nav-links a { transition: color var(--transition), letter-spacing var(--transition); }
+    .nav-links a:hover { letter-spacing: 0.01em; }
+
+    .contact-link-item { transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition); }
+    .contact-link-item:hover { box-shadow: 0 4px 20px var(--accent-glow); border-color: var(--border-hover); }
+
+    .footer-links a { transition: color var(--transition), transform var(--transition); display: inline-block; }
+    .footer-links a:hover { transform: translateX(4px); }
+
+    .achievement-card { transition: all var(--transition); }
+    .achievement-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px var(--accent-glow); border-color: var(--border-hover); }
+
+    /* ========================================================
+       PROJECT FILTER ANIMATION (fade + scale)
+    ======================================================== */
+    .project-card {
+      transition: opacity 0.38s ease, transform 0.38s ease, border-color var(--transition), box-shadow var(--transition);
+    }
+    .project-card.hiding {
+      opacity: 0;
+      transform: scale(0.9) translateY(8px);
+    }
+    .project-card.hidden {
+      display: none !important;
+    }
+    .project-card.showing {
+      animation: cardShow 0.38s ease forwards;
+    }
+    @keyframes cardShow {
+      from { opacity: 0; transform: scale(0.9) translateY(8px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* ========================================================
+       LIVE TOOLS SWIPE HINT (mobile)
+    ======================================================== */
+    @media (max-width: 768px) {
+      .tools-scroll-outer::after {
+        background: linear-gradient(to left, var(--bg-deep) 0%, transparent 80%);
+      }
+      #toolsScroll {
+        cursor: grab;
+      }
+      #toolsScroll:active {
+        cursor: grabbing;
+      }
+    }
+
+    /* ========================================================
+       PARALLAX HERO — JS-driven via CSS variable
+    ======================================================== */
+    .blob {
+      will-change: transform;
+    }
+
   </style>
 </head>
 <body>
@@ -1082,8 +1443,8 @@
   ============================================================ -->
   <nav id="navbar">
     <div class="container nav-inner">
-      <a class="nav-logo" href="#hero">Phil<span>.</span>Ruttley</a>
-      <div class="nav-links">
+      <a class="nav-logo pl-logo" href="#hero">Phil<span>.</span>Ruttley</a>
+      <div class="nav-links pl-nav">
         <a href="#services">What I Do</a>
         <a href="#skills">Skills</a>
         <a href="#projects">Projects</a>
@@ -1091,7 +1452,7 @@
         <a href="#impact">Impact</a>
         <a href="#contact">Contact</a>
       </div>
-      <a class="btn btn-primary nav-cta" href="#contact">Hire Me</a>
+      <a class="btn btn-primary nav-cta pl-cta" href="#contact">Hire Me</a>
       <button class="nav-hamburger" id="hamburger" aria-label="Toggle navigation" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
@@ -1111,6 +1472,7 @@
   ============================================================ -->
   <section id="hero">
     <div class="hero-bg">
+      <canvas id="heroCanvas" aria-hidden="true"></canvas>
       <div class="blob blob-1"></div>
       <div class="blob blob-2"></div>
       <div class="blob blob-3"></div>
@@ -1124,7 +1486,7 @@
       </div>
 
       <h1 class="hero-name fade-in fade-in-delay-1">
-        Phil <span class="accent">Ruttley</span>
+        Phil <span class="accent">Ruttley</span><span class="hero-avail-dot" title="Available for hire"></span>
       </h1>
 
       <p class="hero-role fade-in fade-in-delay-2">IT Support &amp; Systems Engineer</p>
@@ -1148,6 +1510,10 @@
           Contact Me
         </a>
       </div>
+      <div class="hero-status fade-in fade-in-delay-5">
+        <span class="hero-status-dot"></span>
+        Systems Operational
+      </div>
     </div>
 
     <div class="hero-scroll">
@@ -1159,13 +1525,13 @@
   <!-- ============================================================
        WHAT I DO
   ============================================================ -->
-  <section id="services" class="section">
+  <section id="services" class="section dot-bg">
     <div class="container">
       <span class="section-label fade-in">What I Do</span>
       <h2 class="section-title fade-in fade-in-delay-1">Enterprise-Grade IT,<br>Delivered with Precision</h2>
       <p class="section-sub fade-in fade-in-delay-2">From keeping Microsoft 365 environments healthy to building security tooling from scratch — I handle it end to end.</p>
 
-      <div class="services-grid">
+      <div class="services-grid stagger-children">
         <div class="glass service-card fade-in fade-in-delay-1">
           <div class="service-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
@@ -1205,10 +1571,11 @@
     </div>
   </section>
 
+  <hr class="section-divider" />
   <!-- ============================================================
        SKILLS
   ============================================================ -->
-  <section id="skills" class="section">
+  <section id="skills" class="section dot-bg">
     <div class="container">
       <span class="section-label fade-in">Technical Proficiency</span>
       <h2 class="section-title fade-in fade-in-delay-1">Skills &amp; Expertise</h2>
@@ -1220,10 +1587,11 @@
     </div>
   </section>
 
+  <hr class="section-divider" />
   <!-- ============================================================
        PROJECTS
   ============================================================ -->
-  <section id="projects" class="section">
+  <section id="projects" class="section dot-bg">
     <div class="container">
       <span class="section-label fade-in">Portfolio</span>
       <h2 class="section-title fade-in fade-in-delay-1">Featured Projects</h2>
@@ -1243,6 +1611,7 @@
     </div>
   </section>
 
+  <hr class="section-divider" />
   <!-- ============================================================
        LIVE TOOLS
   ============================================================ -->
@@ -1259,6 +1628,7 @@
     </div>
   </section>
 
+  <hr class="section-divider" />
   <!-- ============================================================
        IMPACT
   ============================================================ -->
@@ -1272,7 +1642,7 @@
         <!-- Populated by JS -->
       </div>
 
-      <div class="achievements-grid">
+      <div class="achievements-grid stagger-children">
         <div class="glass achievement-card fade-in fade-in-delay-1">
           <div class="achievement-icon-wrap">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -1304,10 +1674,11 @@
     </div>
   </section>
 
+  <hr class="section-divider" />
   <!-- ============================================================
        CONTACT
   ============================================================ -->
-  <section id="contact" class="section">
+  <section id="contact" class="section dot-bg">
     <div class="container">
       <span class="section-label fade-in">Get in Touch</span>
       <h2 class="section-title fade-in fade-in-delay-1">Let's Work Together</h2>
@@ -1624,27 +1995,7 @@
       });
     })();
 
-    /* --------------------------------------------------------
-       PROJECT FILTER
-    -------------------------------------------------------- */
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const filter = btn.dataset.filter;
-        document.querySelectorAll('.project-card').forEach(card => {
-          const filters = card.dataset.filters.split(',');
-          const show = filter === 'all' || filters.includes(filter);
-          if (show) {
-            card.classList.remove('hidden');
-            // Trigger reflow for animation
-            void card.offsetWidth;
-          } else {
-            card.classList.add('hidden');
-          }
-        });
-      });
-    });
+    /* Project filter handled by initFilter() below */
 
     /* --------------------------------------------------------
        BUILD LIVE TOOLS
@@ -1749,6 +2100,326 @@
 
     // Re-observe after dynamic content is added (tools, etc.)
     requestAnimationFrame(observeFade);
+
+    /* --------------------------------------------------------
+       CANVAS PARTICLES (hero background)
+    -------------------------------------------------------- */
+    (function initParticles() {
+      var canvas = document.getElementById('heroCanvas');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var W, H, particles = [], animId;
+      var PARTICLE_COUNT = 55;
+
+      function resize() {
+        W = canvas.width  = canvas.offsetWidth;
+        H = canvas.height = canvas.offsetHeight;
+      }
+
+      function randomParticle() {
+        var hue = 260 + Math.random() * 40;
+        return {
+          x: Math.random() * W,
+          y: Math.random() * H,
+          r: 1 + Math.random() * 1.8,
+          vx: (Math.random() - 0.5) * 0.28,
+          vy: (Math.random() - 0.5) * 0.28,
+          alpha: 0.15 + Math.random() * 0.5,
+          color: 'hsl(' + hue + ',70%,70%)',
+        };
+      }
+
+      function init() {
+        resize();
+        particles = [];
+        for (var i = 0; i < PARTICLE_COUNT; i++) particles.push(randomParticle());
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+        for (var i = 0; i < particles.length; i++) {
+          for (var j = i + 1; j < particles.length; j++) {
+            var p = particles[i], q = particles[j];
+            var dx = p.x - q.x, dy = p.y - q.y;
+            var dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < 130) {
+              ctx.beginPath();
+              ctx.strokeStyle = 'rgba(167,139,250,' + (0.07 * (1 - dist / 130)) + ')';
+              ctx.lineWidth = 0.8;
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(q.x, q.y);
+              ctx.stroke();
+            }
+          }
+        }
+        particles.forEach(function(p) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.alpha;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < -10) p.x = W + 10;
+          if (p.x > W + 10) p.x = -10;
+          if (p.y < -10) p.y = H + 10;
+          if (p.y > H + 10) p.y = -10;
+        });
+        animId = requestAnimationFrame(draw);
+      }
+
+      init(); draw();
+      window.addEventListener('resize', function() {
+        cancelAnimationFrame(animId); init(); draw();
+      }, { passive: true });
+    })();
+
+    /* --------------------------------------------------------
+       PARALLAX HERO BLOBS
+    -------------------------------------------------------- */
+    (function initParallax() {
+      var blobs = document.querySelectorAll('.blob');
+      var factors = [0.04, -0.03, 0.06];
+      window.addEventListener('scroll', function() {
+        var y = window.scrollY;
+        blobs.forEach(function(b, i) {
+          var f = factors[i] || 0.04;
+          b.style.transform = 'translateY(' + (y * f) + 'px)';
+        });
+      }, { passive: true });
+    })();
+
+    /* --------------------------------------------------------
+       SCROLL-TO-TOP BUTTON
+    -------------------------------------------------------- */
+    (function initScrollTop() {
+      var btn = document.getElementById('scrollTop');
+      window.addEventListener('scroll', function() {
+        btn.classList.toggle('visible', window.scrollY > 400);
+      }, { passive: true });
+      btn.addEventListener('click', function() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    })();
+
+    /* --------------------------------------------------------
+       SMOOTH ANCHOR SCROLL WITH NAV OFFSET
+    -------------------------------------------------------- */
+    function getNavHeight() {
+      var nav = document.getElementById('navbar');
+      return nav ? nav.offsetHeight : 72;
+    }
+
+    (function initSmoothScroll() {
+      document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+        a.addEventListener('click', function(e) {
+          var id = a.getAttribute('href').slice(1);
+          if (!id) return;
+          var target = document.getElementById(id);
+          if (!target) return;
+          e.preventDefault();
+          var top = target.getBoundingClientRect().top + window.scrollY - getNavHeight();
+          window.scrollTo({ top: top, behavior: 'smooth' });
+        });
+      });
+    })();
+
+    /* --------------------------------------------------------
+       STAGGER-CHILDREN OBSERVER
+    -------------------------------------------------------- */
+    (function initStagger() {
+      var obs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+          if (e.isIntersecting) {
+            e.target.classList.add('in-view');
+            obs.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+      document.querySelectorAll('.stagger-children').forEach(function(el) { obs.observe(el); });
+    })();
+
+    /* --------------------------------------------------------
+       3D TILT ON PROJECT CARDS
+    -------------------------------------------------------- */
+    (function initTilt() {
+      function applyTilt(card) {
+        card.addEventListener('mousemove', function(e) {
+          var rect = card.getBoundingClientRect();
+          var cx = rect.left + rect.width / 2;
+          var cy = rect.top + rect.height / 2;
+          var dx = (e.clientX - cx) / (rect.width / 2);
+          var dy = (e.clientY - cy) / (rect.height / 2);
+          card.style.transform = 'perspective(700px) rotateY(' + (dx * 7) + 'deg) rotateX(' + (-dy * 6) + 'deg) translateY(-6px)';
+        });
+        card.addEventListener('mouseleave', function() {
+          card.style.transition = 'transform 0.55s cubic-bezier(0.4,0,0.2,1), border-color var(--transition), box-shadow var(--transition)';
+          card.style.transform = '';
+          setTimeout(function() { card.style.transition = ''; }, 560);
+        });
+      }
+      var mo = new MutationObserver(function() {
+        document.querySelectorAll('.project-card:not([data-tilt])').forEach(function(c) {
+          c.dataset.tilt = '1'; applyTilt(c);
+        });
+      });
+      var grid = document.getElementById('projectsGrid');
+      if (grid) mo.observe(grid, { childList: true });
+      document.querySelectorAll('.project-card').forEach(function(c) { c.dataset.tilt = '1'; applyTilt(c); });
+    })();
+
+    /* --------------------------------------------------------
+       SHIMMER ON SKILL BARS AFTER FILL
+    -------------------------------------------------------- */
+    (function initSkillShimmer() {
+      var skillsSection2 = document.getElementById('skills');
+      var shimmerDone = false;
+      var shimmerObs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting && !shimmerDone) {
+            shimmerDone = true;
+            document.querySelectorAll('.skill-bar-fill').forEach(function(bar, i) {
+              var FILL_DELAY = 150, FILL_DURATION = 1500, STAGGER = 80;
+              setTimeout(function() { bar.classList.add('shimmer'); }, FILL_DELAY + FILL_DURATION + i * STAGGER);
+            });
+            shimmerObs.disconnect();
+          }
+        });
+      }, { threshold: 0.2 });
+      shimmerObs.observe(skillsSection2);
+    })();
+
+    /* --------------------------------------------------------
+       COMMAND PALETTE (CMD+K / Ctrl+K)
+    -------------------------------------------------------- */
+    (function initCommandPalette() {
+      var overlay = document.getElementById('cmdOverlay');
+      var input   = document.getElementById('cmdSearch');
+      var list    = document.getElementById('cmdList');
+      if (!overlay || !input || !list) return;
+
+      var SECTIONS = [
+        { id: 'hero',     label: 'Home' },
+        { id: 'services', label: 'What I Do' },
+        { id: 'skills',   label: 'Skills' },
+        { id: 'projects', label: 'Projects' },
+        { id: 'tools',    label: 'Live Tools' },
+        { id: 'impact',   label: 'Impact' },
+        { id: 'contact',  label: 'Contact' },
+      ];
+
+      var selected = 0;
+      var visible = SECTIONS.slice();
+
+      function render(items) {
+        list.innerHTML = '';
+        items.forEach(function(s, i) {
+          var li = document.createElement('li');
+          li.className = 'cmd-item' + (i === selected ? ' selected' : '');
+          li.setAttribute('role', 'option');
+          li.textContent = s.label;
+          li.addEventListener('mouseenter', function() { selected = i; render(visible); });
+          li.addEventListener('click', function() { navigate(s.id); });
+          list.appendChild(li);
+        });
+      }
+
+      function navigate(id) {
+        closeCmd();
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.getBoundingClientRect().top + window.scrollY - getNavHeight();
+        window.scrollTo({ top: top, behavior: 'smooth' });
+      }
+
+      function openCmd() {
+        overlay.classList.add('open');
+        input.value = '';
+        selected = 0;
+        visible = SECTIONS.slice();
+        render(visible);
+        setTimeout(function() { input.focus(); }, 50);
+      }
+
+      function closeCmd() {
+        overlay.classList.remove('open');
+      }
+
+      input.addEventListener('input', function() {
+        var q = input.value.toLowerCase();
+        visible = SECTIONS.filter(function(s) { return s.label.toLowerCase().indexOf(q) >= 0; });
+        selected = 0;
+        render(visible);
+      });
+
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowDown') { e.preventDefault(); selected = Math.min(selected + 1, visible.length - 1); render(visible); }
+        if (e.key === 'ArrowUp')   { e.preventDefault(); selected = Math.max(selected - 1, 0); render(visible); }
+        if (e.key === 'Enter')     { if (visible[selected]) navigate(visible[selected].id); }
+        if (e.key === 'Escape')    { closeCmd(); }
+      });
+
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) closeCmd(); });
+
+      document.addEventListener('keydown', function(e) {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          overlay.classList.contains('open') ? closeCmd() : openCmd();
+        }
+        if (e.key === 'Escape' && overlay.classList.contains('open')) closeCmd();
+      });
+    })();
+
+    /* --------------------------------------------------------
+       LIVE TOOLS DRAG SCROLL (mouse + touch)
+    -------------------------------------------------------- */
+    (function initToolsDrag() {
+      var el = document.getElementById('toolsScroll');
+      if (!el) return;
+      var startX = 0, startLeft = 0, dragging = false;
+
+      el.addEventListener('mousedown', function(e) {
+        dragging = true; startX = e.pageX; startLeft = el.scrollLeft;
+        el.style.cursor = 'grabbing'; el.style.userSelect = 'none';
+      });
+      window.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        el.scrollLeft = startLeft - (e.pageX - startX);
+      });
+      window.addEventListener('mouseup', function() {
+        dragging = false; el.style.cursor = ''; el.style.userSelect = '';
+      });
+      el.addEventListener('touchstart', function(e) {
+        startX = e.touches[0].pageX; startLeft = el.scrollLeft;
+      }, { passive: true });
+      el.addEventListener('touchmove', function(e) {
+        el.scrollLeft = startLeft - (e.touches[0].pageX - startX);
+      }, { passive: true });
+    })();
+
+
   </script>
+
+  <!-- Scroll to top -->
+  <button id="scrollTop" aria-label="Scroll to top" title="Back to top">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+  </button>
+
+  <!-- Command Palette -->
+  <div id="cmdOverlay" role="dialog" aria-modal="true" aria-label="Command palette">
+    <div id="cmdBox">
+      <input id="cmdSearch" type="text" placeholder="Jump to section…" autocomplete="off" spellcheck="false" />
+      <ul id="cmdList" role="listbox">
+        <!-- Populated by JS -->
+      </ul>
+      <div class="cmd-hint">
+        <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+        <span><kbd>↵</kbd> go</span>
+        <span><kbd>Esc</kbd> close</span>
+        <span><kbd>⌘K</kbd> / <kbd>Ctrl K</kbd> open</span>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
