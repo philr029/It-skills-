@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Uptime Monitor — Phil Ruttley IT Tools</title>
+  <meta name="description" content="Browser-based uptime monitor. Check URLs for availability with response time tracking and uptime history." />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep:      #0c0a15;
+      --bg-mid:       #13101f;
+      --bg-card:      rgba(19, 16, 31, 0.72);
+      --accent:       #a78bfa;
+      --accent-dark:  #8b5cf6;
+      --accent-glow:  rgba(167, 139, 250, 0.25);
+      --text-primary: #f0eaff;
+      --text-muted:   #9d8fc4;
+      --text-dim:     #5e5382;
+      --green:        #4ade80;
+      --green-bg:     rgba(74, 222, 128, 0.12);
+      --red:          #f87171;
+      --red-bg:       rgba(248, 113, 113, 0.12);
+      --yellow:       #fbbf24;
+      --yellow-bg:    rgba(251, 191, 36, 0.12);
+      --border:       rgba(167, 139, 250, 0.18);
+      --border-hover: rgba(167, 139, 250, 0.5);
+      --radius:       16px;
+      --radius-sm:    10px;
+      --transition:   0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-deep);
+      font-family: 'Syne', sans-serif;
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.6;
+    }
+
+    /* ── Container ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Navbar ── */
+    #navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(12, 10, 21, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      transition: box-shadow var(--transition);
+    }
+    #navbar.scrolled { box-shadow: 0 4px 32px rgba(0,0,0,0.4); }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      height: 64px;
+    }
+
+    .nav-logo {
+      font-weight: 800;
+      font-size: 1.3rem;
+      color: var(--text-primary);
+      text-decoration: none;
+      margin-right: auto;
+      letter-spacing: -0.5px;
+    }
+    .nav-logo span { color: var(--accent); }
+
+    .nav-links { display: flex; gap: 28px; }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color var(--transition);
+    }
+    .nav-links a:hover { color: var(--text-primary); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      border-radius: 50px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+      color: #fff;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px var(--accent-glow);
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .btn-outline:hover {
+      border-color: var(--border-hover);
+      color: var(--text-primary);
+      background: rgba(167,139,250,0.06);
+    }
+    .btn-sm { padding: 7px 16px; font-size: 0.82rem; }
+    .btn-danger {
+      background: var(--red-bg);
+      color: var(--red);
+      border: 1px solid rgba(248,113,113,0.25);
+    }
+    .btn-danger:hover { background: rgba(248,113,113,0.2); }
+    .btn-success {
+      background: var(--green-bg);
+      color: var(--green);
+      border: 1px solid rgba(74,222,128,0.25);
+    }
+    .btn-success:hover { background: rgba(74,222,128,0.2); }
+    .btn-warn {
+      background: var(--yellow-bg);
+      color: var(--yellow);
+      border: 1px solid rgba(251,191,36,0.25);
+    }
+    .btn-warn:hover { background: rgba(251,191,36,0.2); }
+
+    .nav-cta { padding: 8px 20px; font-size: 0.85rem; }
+
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      margin-left: auto;
+    }
+    .nav-hamburger span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--text-muted);
+      border-radius: 2px;
+      transition: all var(--transition);
+    }
+
+    .nav-mobile {
+      display: none;
+      flex-direction: column;
+      gap: 0;
+      border-top: 1px solid var(--border);
+    }
+    .nav-mobile a {
+      padding: 14px 24px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.95rem;
+      border-bottom: 1px solid var(--border);
+      transition: color var(--transition);
+    }
+    .nav-mobile a:hover { color: var(--text-primary); }
+    .nav-mobile.open { display: flex; }
+
+    /* ── Main content ── */
+    main { flex: 1; padding: 48px 0 64px; }
+
+    /* ── Breadcrumb ── */
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 36px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .breadcrumb-back {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .breadcrumb-back:hover { color: var(--accent); }
+
+    /* ── Page header ── */
+    .page-header { margin-bottom: 36px; }
+    .page-header h1 {
+      font-size: clamp(2rem, 5vw, 2.8rem);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 12px;
+      letter-spacing: -1px;
+    }
+    .page-header h1 .accent { color: var(--accent); }
+    .page-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 620px;
+    }
+
+    /* ── CORS notice ── */
+    .cors-notice {
+      background: rgba(167,139,250,0.08);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .cors-notice span { flex-shrink: 0; }
+
+    /* ── Glass card ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 24px;
+    }
+
+    /* ── Add URL section ── */
+    .add-section { margin-bottom: 32px; }
+    .add-section h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 18px;
+      color: var(--text-primary);
+    }
+    .add-form {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .add-form .field { display: flex; flex-direction: column; gap: 6px; }
+    .add-form label { font-size: 0.78rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .add-form input, .add-form select {
+      background: rgba(12,10,21,0.6);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.9rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+    .add-form input { min-width: 280px; flex: 1; }
+    .add-form select { min-width: 150px; cursor: pointer; }
+    .add-form input:focus, .add-form select:focus { border-color: var(--accent); }
+    .add-form input::placeholder { color: var(--text-dim); }
+    .add-form select option { background: #1a1628; }
+
+    .error-msg {
+      color: var(--red);
+      font-size: 0.83rem;
+      margin-top: 10px;
+      min-height: 20px;
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      transition: border-color var(--transition);
+    }
+    .stat-card:hover { border-color: var(--border-hover); }
+    .stat-number {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .stat-label {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stat-total .stat-number { color: var(--accent); }
+    .stat-online .stat-number { color: var(--green); }
+    .stat-offline .stat-number { color: var(--red); }
+    .stat-checking .stat-number { color: var(--yellow); }
+
+    /* ── Global controls ── */
+    .global-controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .global-controls-label {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-right: 4px;
+    }
+
+    /* ── Monitors grid ── */
+    .monitors-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 64px 24px;
+      color: var(--text-dim);
+    }
+    .empty-state svg { margin-bottom: 16px; opacity: 0.4; }
+    .empty-state p { font-size: 1rem; }
+
+    /* ── Monitor card ── */
+    .monitor-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--text-dim);
+      border-radius: var(--radius);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 20px;
+      position: relative;
+      transition: all var(--transition);
+    }
+    .monitor-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    .monitor-card.status-up    { border-left-color: var(--green); }
+    .monitor-card.status-down  { border-left-color: var(--red); }
+    .monitor-card.status-checking { border-left-color: var(--yellow); }
+    .monitor-card.status-paused   { border-left-color: var(--text-dim); }
+    .monitor-card.status-up:hover    { box-shadow: 0 8px 32px rgba(74,222,128,0.12); }
+    .monitor-card.status-down:hover  { box-shadow: 0 8px 32px rgba(248,113,113,0.12); }
+
+    .monitor-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .monitor-url {
+      font-family: 'Syne Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: calc(100% - 32px);
+      flex: 1;
+    }
+
+    .btn-remove {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+      line-height: 1;
+      flex-shrink: 0;
+      transition: color var(--transition), background var(--transition);
+    }
+    .btn-remove:hover { color: var(--red); background: var(--red-bg); }
+
+    .monitor-status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.up       { background: var(--green); }
+    .status-dot.down     { background: var(--red); }
+    .status-dot.checking { background: var(--yellow); animation: pulse-dot 1.2s ease-in-out infinite; }
+    .status-dot.paused   { background: var(--text-dim); }
+
+    @keyframes pulse-dot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50%       { transform: scale(1.5); opacity: 0.6; }
+    }
+
+    .status-text {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .status-text.up       { color: var(--green); }
+    .status-text.down     { color: var(--red); }
+    .status-text.checking { color: var(--yellow); }
+    .status-text.paused   { color: var(--text-dim); }
+
+    .response-time {
+      margin-left: auto;
+      font-family: 'Syne Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .monitor-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+    .last-checked { font-size: 0.78rem; color: var(--text-dim); }
+
+    /* ── Uptime bar ── */
+    .uptime-section { margin-bottom: 12px; }
+    .uptime-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .uptime-label { font-size: 0.75rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .uptime-pct {
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: 'Syne Mono', monospace;
+    }
+    .uptime-pct.high   { color: var(--green); }
+    .uptime-pct.medium { color: var(--yellow); }
+    .uptime-pct.low    { color: var(--red); }
+
+    .uptime-track {
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .uptime-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.6s ease;
+    }
+    .uptime-fill.high   { background: var(--green); }
+    .uptime-fill.medium { background: var(--yellow); }
+    .uptime-fill.low    { background: var(--red); }
+
+    /* ── Sparkline ── */
+    .sparkline-section {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sparkline-label { font-size: 0.72rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+    .sparkline-svg { flex: 1; display: block; height: 30px; }
+
+    /* ── Card footer controls ── */
+    .monitor-card-footer {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Footer ── */
+    #footer {
+      background: var(--bg-mid);
+      border-top: 1px solid var(--border);
+      padding: 56px 0 28px;
+      margin-top: auto;
+    }
+    .footer-top {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 48px;
+    }
+    .footer-logo {
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+    .footer-logo span { color: var(--accent); }
+    .footer-tagline { color: var(--text-dim); font-size: 0.88rem; line-height: 1.6; max-width: 280px; }
+    .footer-col-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+    }
+    .footer-links { display: flex; flex-direction: column; gap: 10px; }
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color var(--transition);
+    }
+    .footer-links a:hover { color: var(--accent); }
+    .footer-bottom {
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-copy { color: var(--text-dim); font-size: 0.85rem; }
+    .footer-status { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); }
+    .footer-status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .monitors-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+      .footer-top { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px) {
+      .monitors-grid { grid-template-columns: 1fr; }
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+      .add-form { flex-direction: column; }
+      .add-form input { min-width: unset; }
+      .nav-links, .nav-cta { display: none; }
+      .nav-hamburger { display: flex; }
+      .footer-top { grid-template-columns: 1fr; gap: 28px; }
+      .global-controls { gap: 8px; }
+    }
+    @media (max-width: 420px) {
+      .stats-bar { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<nav id="navbar">
+  <div class="container nav-inner">
+    <a class="nav-logo" href="index.html">Phil<span>.</span>Ruttley</a>
+    <div class="nav-links">
+      <a href="index.html">Portfolio</a>
+      <a href="index.html#services">What I Do</a>
+      <a href="index.html#skills">Skills</a>
+      <a href="tools.html">IT Tools</a>
+      <a href="index.html#contact">Contact</a>
+    </div>
+    <a class="btn btn-primary nav-cta" href="index.html#contact">Hire Me</a>
+    <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="index.html">Portfolio</a>
+    <a href="tools.html">IT Tools</a>
+    <a href="index.html#contact">Contact</a>
+  </div>
+</nav>
+
+<!-- ── Main ── -->
+<main>
+  <div class="container">
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a class="breadcrumb-back" href="tools.html">← All Tools</a>
+      <a class="btn btn-outline btn-sm" href="index.html">Back to Portfolio</a>
+    </div>
+
+    <!-- Page header -->
+    <div class="page-header">
+      <h1>Uptime <span class="accent">Monitor</span></h1>
+      <p>Monitor URLs in your browser. Checks are performed via <code style="font-family:'Syne Mono',monospace;font-size:0.9em;color:var(--accent)">fetch()</code> and may be limited by CORS policies — use for reference only.</p>
+    </div>
+
+    <!-- CORS notice -->
+    <div class="cors-notice">
+      <span>ℹ️</span>
+      <span><strong>Browser Limitation:</strong> Due to CORS restrictions, some URLs may show as unreachable even when online. For production monitoring, use a server-side solution.</span>
+    </div>
+
+    <!-- Add URL section -->
+    <div class="card add-section">
+      <h2>Add URL to Monitor</h2>
+      <div class="add-form">
+        <div class="field" style="flex:1">
+          <label for="urlInput">URL</label>
+          <input type="url" id="urlInput" placeholder="https://example.com" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="intervalSelect">Check Interval</label>
+          <select id="intervalSelect">
+            <option value="30000">30 seconds</option>
+            <option value="60000" selected>1 minute</option>
+            <option value="120000">2 minutes</option>
+            <option value="300000">5 minutes</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="addMonitor()">+ Add URL</button>
+      </div>
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="stats-bar">
+      <div class="stat-card stat-total">
+        <div class="stat-number" id="statTotal">0</div>
+        <div class="stat-label">Total</div>
+      </div>
+      <div class="stat-card stat-online">
+        <div class="stat-number" id="statOnline">0</div>
+        <div class="stat-label">Online</div>
+      </div>
+      <div class="stat-card stat-offline">
+        <div class="stat-number" id="statOffline">0</div>
+        <div class="stat-label">Offline</div>
+      </div>
+      <div class="stat-card stat-checking">
+        <div class="stat-number" id="statChecking">0</div>
+        <div class="stat-label">Checking</div>
+      </div>
+    </div>
+
+    <!-- Global controls -->
+    <div class="global-controls">
+      <span class="global-controls-label">Controls:</span>
+      <button class="btn btn-success btn-sm" onclick="startAll()">▶ Start All</button>
+      <button class="btn btn-warn btn-sm" onclick="pauseAll()">⏸ Pause All</button>
+      <button class="btn btn-outline btn-sm" onclick="checkNow()">⚡ Check Now</button>
+    </div>
+
+    <!-- Monitors grid -->
+    <div class="monitors-grid" id="monitorsGrid">
+      <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/><path d="M12 8v4l2.5 2.5"/>
+        </svg>
+        <p>No monitors yet. Add a URL above to get started.</p>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ── Footer ── -->
+<footer id="footer">
+  <div class="container">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">Phil<span>.</span>Ruttley</div>
+        <div class="footer-tagline">IT Support &amp; Systems Engineer — Microsoft 365, Cybersecurity, Automation.</div>
+      </div>
+      <div>
+        <div class="footer-col-title">Navigation</div>
+        <div class="footer-links">
+          <a href="index.html">Portfolio</a>
+          <a href="tools.html">IT Tools Hub</a>
+          <a href="index.html#contact">Contact</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">More Tools</div>
+        <div class="footer-links">
+          <a href="ip-checker.html">IP Checker</a>
+          <a href="domain-security.html">Domain Security</a>
+          <a href="password-generator.html">Password Generator</a>
+          <a href="subnet-calculator.html">Subnet Calculator</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2026 Phil Ruttley. All rights reserved.</div>
+      <div class="footer-status"><span class="footer-status-dot"></span>All systems operational</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  /* ─────────────────────────────────────────────
+     State
+  ───────────────────────────────────────────── */
+  let monitors = [];
+  let relativeTimeInterval = null;
+  const MAX_MONITORS = 8;
+  const MAX_HISTORY   = 20;
+
+  function uid() {
+    return Math.random().toString(36).slice(2, 10);
+  }
+
+  /* ─────────────────────────────────────────────
+     Check a single URL
+  ───────────────────────────────────────────── */
+  async function checkUrl(monitor) {
+    if (monitor.status === 'paused') return;
+
+    monitor.status = 'checking';
+    renderCard(monitor);
+    updateStats();
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    const t0 = performance.now();
+
+    try {
+      await fetch(monitor.url, {
+        method: 'HEAD',
+        mode: 'no-cors',
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      const rt = Math.round(performance.now() - t0);
+      clearTimeout(timeout);
+      recordResult(monitor, 'up', rt);
+    } catch (_) {
+      clearTimeout(timeout);
+      recordResult(monitor, 'down', null);
+    }
+  }
+
+  function recordResult(monitor, status, responseTime) {
+    monitor.status       = status;
+    monitor.responseTime = responseTime;
+    monitor.lastChecked  = new Date();
+
+    monitor.history.push({ timestamp: new Date(), status, responseTime });
+    if (monitor.history.length > MAX_HISTORY) monitor.history.shift();
+
+    const upCount = monitor.history.filter(h => h.status === 'up').length;
+    monitor.uptimePercent = monitor.history.length
+      ? Math.round((upCount / monitor.history.length) * 1000) / 10
+      : 0;
+
+    renderCard(monitor);
+    updateStats();
+  }
+
+  /* ─────────────────────────────────────────────
+     Monitor lifecycle
+  ───────────────────────────────────────────── */
+  function startMonitor(monitor) {
+    if (monitor.intervalId) clearInterval(monitor.intervalId);
+    monitor.status = 'checking';
+    checkUrl(monitor);
+    monitor.intervalId = setInterval(() => checkUrl(monitor), monitor.interval);
+  }
+
+  function pauseMonitor(monitor) {
+    if (monitor.intervalId) { clearInterval(monitor.intervalId); monitor.intervalId = null; }
+    monitor.status = 'paused';
+    renderCard(monitor);
+    updateStats();
+  }
+
+  function resumeMonitor(monitor) {
+    startMonitor(monitor);
+  }
+
+  function removeMonitor(id) {
+    const m = monitors.find(x => x.id === id);
+    if (m && m.intervalId) clearInterval(m.intervalId);
+    monitors = monitors.filter(x => x.id !== id);
+    renderAll();
+    updateStats();
+  }
+
+  function startAll() {
+    monitors.forEach(m => { if (m.status === 'paused') resumeMonitor(m); else startMonitor(m); });
+  }
+
+  function pauseAll() {
+    monitors.forEach(m => pauseMonitor(m));
+  }
+
+  function checkNow() {
+    monitors.forEach(m => { if (m.status !== 'paused') checkUrl(m); });
+  }
+
+  /* ─────────────────────────────────────────────
+     Add monitor
+  ───────────────────────────────────────────── */
+  function addMonitor(url, interval) {
+    const errEl = document.getElementById('errorMsg');
+    errEl.textContent = '';
+
+    let rawUrl   = (url  || document.getElementById('urlInput').value.trim());
+    let rawIntvl = (interval || parseInt(document.getElementById('intervalSelect').value, 10));
+
+    if (!rawUrl) { errEl.textContent = 'Please enter a URL.'; return; }
+
+    // Auto-prepend https://
+    if (!/^https?:\/\//i.test(rawUrl)) rawUrl = 'https://' + rawUrl;
+
+    try { new URL(rawUrl); } catch (_) { errEl.textContent = 'Please enter a valid URL.'; return; }
+
+    if (monitors.length >= MAX_MONITORS) {
+      errEl.textContent = `Maximum of ${MAX_MONITORS} monitors reached. Remove one to add another.`;
+      return;
+    }
+
+    if (monitors.some(m => m.url === rawUrl)) {
+      errEl.textContent = 'This URL is already being monitored.'; return;
+    }
+
+    const monitor = {
+      id: uid(),
+      url: rawUrl,
+      interval: rawIntvl,
+      status: 'checking',
+      responseTime: null,
+      lastChecked: null,
+      history: [],
+      uptimePercent: 0,
+      intervalId: null
+    };
+
+    monitors.push(monitor);
+    document.getElementById('urlInput').value = '';
+
+    renderAll();
+    updateStats();
+    startMonitor(monitor);
+  }
+
+  /* ─────────────────────────────────────────────
+     Rendering helpers
+  ───────────────────────────────────────────── */
+  function relativeTime(date) {
+    if (!date) return '—';
+    const secs = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (secs < 5)  return 'just now';
+    if (secs < 60) return `${secs}s ago`;
+    const mins = Math.floor(secs / 60);
+    if (mins < 60) return `${mins} minute${mins !== 1 ? 's' : ''} ago`;
+    const hrs = Math.floor(mins / 60);
+    return `${hrs} hour${hrs !== 1 ? 's' : ''} ago`;
+  }
+
+  function statusLabel(status) {
+    return { up: '🟢 Online', down: '🔴 Offline', checking: '🟡 Checking', paused: '⚫ Paused' }[status] || status;
+  }
+
+  function uptimeClass(pct) {
+    if (pct >= 95) return 'high';
+    if (pct >= 80) return 'medium';
+    return 'low';
+  }
+
+  function buildSparkline(history) {
+    if (!history || history.length === 0) {
+      return `<svg class="sparkline-svg" viewBox="0 0 80 30" preserveAspectRatio="none"><text x="4" y="20" font-size="9" fill="#5e5382">No data</text></svg>`;
+    }
+
+    const W = 80, H = 30;
+    const count  = history.length;
+    const barW   = Math.max(2, Math.floor((W - 2) / count) - 1);
+    const gap    = Math.max(1, Math.floor((W - 2 - barW * count) / (count - 1 || 1)));
+    let bars = '';
+
+    history.forEach((h, i) => {
+      const x   = i * (barW + gap);
+      const col = h.status === 'up' ? '#4ade80' : '#f87171';
+      bars += `<rect x="${x}" y="4" width="${barW}" height="${H - 8}" rx="1" fill="${col}" opacity="0.85"/>`;
+    });
+
+    return `<svg class="sparkline-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}</svg>`;
+  }
+
+  function intervalLabel(ms) {
+    if (ms === 30000)  return '30s';
+    if (ms === 60000)  return '1m';
+    if (ms === 120000) return '2m';
+    if (ms === 300000) return '5m';
+    return `${ms / 1000}s`;
+  }
+
+  /* ─────────────────────────────────────────────
+     Render single card (update in-place or create)
+  ───────────────────────────────────────────── */
+  function renderCard(monitor) {
+    const existing = document.getElementById('card-' + monitor.id);
+    const html     = buildCardHTML(monitor);
+
+    if (existing) {
+      existing.outerHTML = html;
+    } else {
+      const grid = document.getElementById('monitorsGrid');
+      const empty = grid.querySelector('.empty-state');
+      if (empty) empty.remove();
+      grid.insertAdjacentHTML('beforeend', html);
+    }
+  }
+
+  function buildCardHTML(m) {
+    const uc        = uptimeClass(m.uptimePercent);
+    const rtDisplay = m.responseTime !== null ? `${m.responseTime} ms` : '—';
+    const lcDisplay = relativeTime(m.lastChecked);
+    const shortUrl  = m.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const isPaused  = m.status === 'paused';
+    const pauseBtn  = isPaused
+      ? `<button class="btn btn-success btn-sm" onclick="resumeMonitor(getMonitor('${m.id}'))">▶ Resume</button>`
+      : `<button class="btn btn-warn btn-sm" onclick="pauseMonitor(getMonitor('${m.id}'))">⏸ Pause</button>`;
+
+    return `
+    <div class="monitor-card status-${m.status}" id="card-${m.id}">
+      <div class="monitor-card-header">
+        <span class="monitor-url" title="${m.url}">${shortUrl}</span>
+        <button class="btn-remove" title="Remove monitor" onclick="removeMonitor('${m.id}')">×</button>
+      </div>
+
+      <div class="monitor-status-row">
+        <span class="status-dot ${m.status}"></span>
+        <span class="status-text ${m.status}">${statusLabel(m.status)}</span>
+        <span class="response-time">${rtDisplay}</span>
+      </div>
+
+      <div class="monitor-meta">
+        <span class="last-checked" id="lc-${m.id}">Last checked: ${lcDisplay}</span>
+        <span style="font-size:0.75rem;color:var(--text-dim)">Every ${intervalLabel(m.interval)}</span>
+      </div>
+
+      <div class="uptime-section">
+        <div class="uptime-label-row">
+          <span class="uptime-label">Uptime</span>
+          <span class="uptime-pct ${uc}">${m.history.length ? m.uptimePercent + '%' : '—'}</span>
+        </div>
+        <div class="uptime-track">
+          <div class="uptime-fill ${uc}" style="width:${m.uptimePercent}%"></div>
+        </div>
+      </div>
+
+      <div class="sparkline-section" style="margin-top:12px">
+        <span class="sparkline-label">History</span>
+        ${buildSparkline(m.history)}
+      </div>
+
+      <div class="monitor-card-footer">
+        ${pauseBtn}
+        <button class="btn btn-outline btn-sm" onclick="checkUrl(getMonitor('${m.id}'))">⚡ Check</button>
+      </div>
+    </div>`;
+  }
+
+  function renderAll() {
+    const grid = document.getElementById('monitorsGrid');
+    if (monitors.length === 0) {
+      grid.innerHTML = `<div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/><path d="M12 8v4l2.5 2.5"/>
+        </svg>
+        <p>No monitors yet. Add a URL above to get started.</p>
+      </div>`;
+      return;
+    }
+    grid.innerHTML = monitors.map(buildCardHTML).join('');
+  }
+
+  /* ─────────────────────────────────────────────
+     Stats
+  ───────────────────────────────────────────── */
+  function updateStats() {
+    document.getElementById('statTotal').textContent    = monitors.length;
+    document.getElementById('statOnline').textContent   = monitors.filter(m => m.status === 'up').length;
+    document.getElementById('statOffline').textContent  = monitors.filter(m => m.status === 'down').length;
+    document.getElementById('statChecking').textContent = monitors.filter(m => m.status === 'checking').length;
+  }
+
+  /* ─────────────────────────────────────────────
+     Relative time ticker
+  ───────────────────────────────────────────── */
+  function tickRelativeTimes() {
+    monitors.forEach(m => {
+      const el = document.getElementById('lc-' + m.id);
+      if (el) el.textContent = 'Last checked: ' + relativeTime(m.lastChecked);
+    });
+  }
+
+  /* ─────────────────────────────────────────────
+     Expose monitor lookup to inline handlers
+  ───────────────────────────────────────────── */
+  function getMonitor(id) {
+    return monitors.find(m => m.id === id);
+  }
+
+  /* ─────────────────────────────────────────────
+     Navbar
+  ───────────────────────────────────────────── */
+  window.addEventListener('scroll', () => {
+    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 10);
+  });
+
+  document.getElementById('hamburger').addEventListener('click', () => {
+    document.getElementById('navMobile').classList.toggle('open');
+  });
+
+  /* ─────────────────────────────────────────────
+     Enter key on URL input
+  ───────────────────────────────────────────── */
+  document.getElementById('urlInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addMonitor();
+  });
+
+  /* ─────────────────────────────────────────────
+     Init
+  ───────────────────────────────────────────── */
+  const DEFAULTS = [
+    { url: 'https://google.com',     interval: 60000 },
+    { url: 'https://cloudflare.com', interval: 60000 },
+    { url: 'https://github.com',     interval: 60000 }
+  ];
+
+  DEFAULTS.forEach(d => addMonitor(d.url, d.interval));
+
+  relativeTimeInterval = setInterval(tickRelativeTimes, 30000);
+</script>
+</body>
+</html>

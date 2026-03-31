@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log Analyzer | Phil Ruttley</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg-deep:#0c0a15;--bg-mid:#13101f;--bg-card:rgba(19,16,31,0.72);--accent:#a78bfa;--accent-dark:#8b5cf6;--accent-glow:rgba(167,139,250,0.25);--text-primary:#f0eaff;--text-muted:#9d8fc4;--text-dim:#5e5382;--green:#4ade80;--green-bg:rgba(74,222,128,0.12);--red:#f87171;--red-bg:rgba(248,113,113,0.12);--yellow:#fbbf24;--yellow-bg:rgba(251,191,36,0.12);--border:rgba(167,139,250,0.18);--border-hover:rgba(167,139,250,0.5);--radius:16px;--radius-sm:10px;--transition:0.35s cubic-bezier(0.4,0,0.2,1)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg-deep);font-family:'Syne',sans-serif;color:var(--text-primary);min-height:100vh;line-height:1.6}
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+#navbar{position:sticky;top:0;z-index:100;background:rgba(12,10,21,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);transition:var(--transition)}
+#navbar.scrolled{background:rgba(12,10,21,0.97);box-shadow:0 4px 32px rgba(0,0,0,0.4)}
+.nav-inner{display:flex;align-items:center;gap:32px;height:64px}
+.nav-logo{font-size:1.25rem;font-weight:800;color:var(--text-primary);text-decoration:none;letter-spacing:-0.02em;white-space:nowrap}
+.nav-logo span{color:var(--accent)}
+.nav-links{display:flex;gap:4px;flex:1}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500;padding:6px 12px;border-radius:8px;transition:var(--transition)}
+.nav-links a:hover{color:var(--text-primary);background:rgba(167,139,250,.08)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 22px;border-radius:var(--radius-sm);font-family:'Syne',sans-serif;font-size:.875rem;font-weight:600;cursor:pointer;text-decoration:none;transition:var(--transition);border:none;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;box-shadow:0 4px 20px var(--accent-glow)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(167,139,250,.42)}
+.btn-outline{background:transparent;color:var(--accent);border:1px solid var(--border-hover)}
+.btn-outline:hover{background:var(--accent-glow);border-color:var(--accent)}
+.nav-cta{padding:8px 20px;font-size:.875rem}
+.nav-hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:4px;margin-left:auto}
+.nav-hamburger span{display:block;width:22px;height:2px;background:var(--text-primary);border-radius:2px;transition:var(--transition)}
+.nav-mobile{display:none;flex-direction:column;gap:4px;padding:12px 24px 16px;border-top:1px solid var(--border)}
+.nav-mobile.open{display:flex}
+.nav-mobile a{color:var(--text-muted);text-decoration:none;font-size:.9rem;font-weight:500;padding:8px 12px;border-radius:8px;transition:var(--transition)}
+.nav-mobile a:hover{color:var(--text-primary);background:rgba(167,139,250,.08)}
+@media(max-width:768px){.nav-links,.nav-cta{display:none}.nav-hamburger{display:flex}}
+main{padding:56px 0 80px;min-height:calc(100vh - 64px - 220px)}
+.breadcrumb{display:flex;align-items:center;justify-content:space-between;margin-bottom:36px;flex-wrap:wrap;gap:12px}
+.breadcrumb-back{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:var(--transition)}
+.breadcrumb-back:hover{color:var(--accent)}
+.page-header{margin-bottom:40px}
+.page-header h1{font-size:clamp(2rem,4vw,3rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:14px}
+.page-header p{color:var(--text-muted);font-size:1rem;max-width:640px;line-height:1.65}
+.accent{color:var(--accent)}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:28px;margin-bottom:24px}
+.card-title{font-size:.7rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.12em;margin-bottom:16px}
+.log-textarea{width:100%;min-height:200px;background:rgba(167,139,250,.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-family:'Syne Mono',monospace;font-size:.78rem;padding:12px;resize:vertical;outline:none;line-height:1.55;transition:border-color var(--transition),box-shadow var(--transition)}
+.log-textarea::placeholder{color:var(--text-dim)}
+.log-textarea:focus{border-color:var(--border-hover);background:rgba(167,139,250,.09);box-shadow:0 0 0 3px var(--accent-glow)}
+.input-row{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+.sample-row{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);flex-wrap:wrap}
+.sample-label{font-size:.8rem;color:var(--text-muted);font-weight:600}
+.select-input{background:rgba(167,139,250,.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-family:'Syne',sans-serif;font-size:.8rem;padding:7px 12px;outline:none;cursor:pointer;transition:var(--transition)}
+.select-input:focus{border-color:var(--border-hover)}
+.select-input option{background:#1a1630;color:var(--text-primary)}
+#results{display:none}
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+@media(max-width:680px){.stats-grid{grid-template-columns:repeat(3,1fr)}}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:18px 14px;text-align:center;backdrop-filter:blur(20px);transition:border-color var(--transition)}
+.stat-card:hover{border-color:var(--border-hover)}
+.stat-number{font-size:1.9rem;font-weight:800;letter-spacing:-.04em;line-height:1;margin-bottom:5px}
+.stat-label{font-size:.68rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.1em}
+.stat-total .stat-number{color:var(--accent)}
+.stat-critical .stat-number{color:var(--red)}
+.stat-error .stat-number{color:#fca5a5}
+.stat-warning .stat-number{color:var(--yellow)}
+.stat-info .stat-number{color:var(--text-muted)}
+.filter-bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.filter-btn{padding:5px 14px;border-radius:20px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-muted);transition:var(--transition)}
+.filter-btn:hover{border-color:var(--border-hover);color:var(--text-primary)}
+.filter-btn.active{background:var(--accent-glow);border-color:var(--accent);color:var(--accent)}
+.search-input{margin-left:auto;background:rgba(167,139,250,.06);border:1px solid var(--border);border-radius:20px;color:var(--text-primary);font-family:'Syne',sans-serif;font-size:.8rem;padding:5px 14px;outline:none;width:200px;transition:var(--transition)}
+.search-input::placeholder{color:var(--text-dim)}
+.search-input:focus{border-color:var(--border-hover);box-shadow:0 0 0 2px var(--accent-glow)}
+@media(max-width:600px){.search-input{width:100%;margin-left:0}}
+.table-wrap{max-height:500px;overflow-y:auto;border-radius:var(--radius-sm);border:1px solid var(--border);scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.table-wrap::-webkit-scrollbar{width:6px}
+.table-wrap::-webkit-scrollbar-track{background:transparent}
+.table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.table-wrap::-webkit-scrollbar-thumb:hover{background:var(--border-hover)}
+.log-table{width:100%;border-collapse:collapse;font-family:'Syne Mono',monospace;font-size:.77rem}
+.log-table thead th{position:sticky;top:0;background:rgba(12,10,21,.97);color:var(--text-muted);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);z-index:2}
+.log-table thead th:first-child{width:38px}
+.log-table thead th:nth-child(2){width:150px}
+.log-table thead th:nth-child(3){width:96px}
+.log-table thead th:nth-child(4){width:150px}
+.log-table thead th:nth-child(5){width:72px}
+.log-table tbody tr.log-row{cursor:pointer;transition:filter .15s ease;border-bottom:1px solid rgba(167,139,250,.05)}
+.log-table tbody tr.log-row:hover{filter:brightness(1.3)}
+.log-table tbody tr.row-critical{background:rgba(248,113,113,.2);border-left:3px solid var(--red)}
+.log-table tbody tr.row-error{background:var(--red-bg);border-left:3px solid rgba(248,113,113,.5)}
+.log-table tbody tr.row-warning{background:var(--yellow-bg);border-left:3px solid rgba(251,191,36,.5)}
+.log-table tbody tr.row-info{background:transparent;border-left:3px solid transparent}
+.log-table tbody tr.row-success{background:var(--green-bg);border-left:3px solid rgba(74,222,128,.5)}
+.log-table td{padding:8px 12px;vertical-align:middle;color:var(--text-primary)}
+.log-table td.td-num{color:var(--text-dim);font-size:.7rem}
+.log-table td.td-ts{color:var(--text-muted);white-space:nowrap;font-size:.74rem}
+.log-table td.td-src{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted)}
+.log-table td.td-msg{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'Syne',sans-serif;white-space:nowrap}
+.badge-critical{background:rgba(248,113,113,.25);color:var(--red);border:1px solid rgba(248,113,113,.4)}
+.badge-error{background:rgba(248,113,113,.14);color:#fca5a5;border:1px solid rgba(248,113,113,.28)}
+.badge-warning{background:var(--yellow-bg);color:var(--yellow);border:1px solid rgba(251,191,36,.3)}
+.badge-info{background:rgba(167,139,250,.12);color:var(--accent);border:1px solid rgba(167,139,250,.2)}
+.badge-success{background:var(--green-bg);color:var(--green);border:1px solid rgba(74,222,128,.3)}
+.expanded-row td{padding:0}
+.expanded-content{background:rgba(167,139,250,.08);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:16px 20px;font-family:'Syne Mono',monospace;font-size:.76rem;color:var(--text-muted);white-space:pre-wrap;word-break:break-word;line-height:1.65;animation:expandIn .2s ease}
+@keyframes expandIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.export-bar{display:flex;justify-content:flex-end;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.stats-panels{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:680px){.stats-panels{grid-template-columns:1fr}}
+.stats-panel-title{font-size:.7rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.12em;margin-bottom:16px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.bar-row:last-child{margin-bottom:0}
+.bar-label{font-size:.73rem;color:var(--text-muted);width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;font-family:'Syne Mono',monospace}
+.bar-track{flex:1;background:rgba(167,139,250,.08);border-radius:4px;height:8px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent-dark));transition:width .6s cubic-bezier(.4,0,.2,1);min-width:3px}
+.bar-fill.fill-critical{background:linear-gradient(90deg,var(--red),#dc2626)}
+.bar-fill.fill-error{background:linear-gradient(90deg,#f87171,#ef4444)}
+.bar-fill.fill-warning{background:linear-gradient(90deg,var(--yellow),#d97706)}
+.bar-fill.fill-success{background:linear-gradient(90deg,var(--green),#16a34a)}
+.bar-value{font-size:.72rem;color:var(--text-dim);width:26px;text-align:right;font-family:'Syne Mono',monospace;flex-shrink:0}
+.security-alerts-full{grid-column:1/-1}
+.alert-item{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.alert-item:last-child{border-bottom:none;padding-bottom:0}
+.alert-dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:6px;box-shadow:0 0 6px rgba(248,113,113,.5)}
+.alert-dot.warn{background:var(--yellow);box-shadow:0 0 6px rgba(251,191,36,.5)}
+.alert-text{font-size:.78rem;color:var(--text-muted);font-family:'Syne Mono',monospace;line-height:1.5}
+.alert-text strong{color:var(--text-primary);font-family:'Syne',sans-serif;font-size:.8rem}
+.no-entries{text-align:center;padding:36px;color:var(--text-dim);font-size:.875rem;font-family:'Syne',sans-serif}
+.empty-panel{padding:16px 0 4px;color:var(--text-dim);font-size:.8rem}
+#footer{background:var(--bg-mid);border-top:1px solid var(--border);padding:52px 0 28px}
+.footer-top{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:48px;margin-bottom:40px}
+@media(max-width:680px){.footer-top{grid-template-columns:1fr;gap:24px}}
+.footer-logo{font-size:1.25rem;font-weight:800;color:var(--text-primary);margin-bottom:10px}
+.footer-logo span{color:var(--accent)}
+.footer-tagline{font-size:.82rem;color:var(--text-dim);line-height:1.55}
+.footer-col-title{font-size:.68rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.12em;margin-bottom:14px}
+.footer-links{display:flex;flex-direction:column;gap:9px}
+.footer-links a{color:var(--text-muted);text-decoration:none;font-size:.84rem;transition:color var(--transition)}
+.footer-links a:hover{color:var(--accent)}
+.footer-bottom{display:flex;align-items:center;justify-content:space-between;padding-top:24px;border-top:1px solid var(--border);flex-wrap:wrap;gap:12px}
+.footer-copy{font-size:.8rem;color:var(--text-dim)}
+.footer-status{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--text-dim)}
+.footer-status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse-dot 2s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.82)}}
+</style>
+</head>
+<body>
+<nav id="navbar">
+  <div class="container nav-inner">
+    <a class="nav-logo" href="index.html">Phil<span>.</span>Ruttley</a>
+    <div class="nav-links">
+      <a href="index.html">Portfolio</a>
+      <a href="index.html#services">What I Do</a>
+      <a href="index.html#skills">Skills</a>
+      <a href="tools.html">IT Tools</a>
+      <a href="index.html#contact">Contact</a>
+    </div>
+    <a class="btn btn-primary nav-cta" href="index.html#contact">Hire Me</a>
+    <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="index.html">Portfolio</a>
+    <a href="tools.html">IT Tools</a>
+    <a href="index.html#contact">Contact</a>
+  </div>
+</nav>
+<main>
+  <div class="container">
+    <div class="breadcrumb">
+      <a class="breadcrumb-back" href="tools.html">&#8592; All Tools</a>
+      <a class="btn btn-outline" href="index.html">Back to Portfolio</a>
+    </div>
+    <div class="page-header">
+      <h1>Log <span class="accent">Analyzer</span></h1>
+      <p>Paste Windows Event Viewer logs or syslog entries for instant parsing, highlighting, and filtering.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Paste Log Data</div>
+      <textarea id="logInput" class="log-textarea" placeholder="Paste your log content here — Windows Event Log, Syslog, Apache access log, or IIS W3C log..."></textarea>
+      <div class="input-row">
+        <button class="btn btn-primary" id="analyzeBtn">&#9654; Analyze Logs</button>
+        <button class="btn btn-outline" id="clearBtn">Clear</button>
+      </div>
+      <div class="sample-row">
+        <span class="sample-label">Load Sample:</span>
+        <select id="sampleSelect" class="select-input">
+          <option value="windows">Windows Event Log</option>
+          <option value="syslog">Syslog / Linux</option>
+          <option value="apache">Apache Access Log</option>
+          <option value="iis">IIS Log</option>
+        </select>
+        <button class="btn btn-outline" id="loadSampleBtn" style="padding:6px 16px;font-size:.78rem;">Load</button>
+      </div>
+    </div>
+    <div id="results">
+      <div class="stats-grid" id="summaryStats"></div>
+      <div class="card" style="padding-bottom:18px">
+        <div class="filter-bar" id="filterBar"></div>
+        <div class="table-wrap">
+          <table class="log-table">
+            <thead><tr><th>#</th><th>Timestamp</th><th>Level</th><th>Source / Host</th><th>Event ID</th><th>Message</th></tr></thead>
+            <tbody id="logTableBody"></tbody>
+          </table>
+        </div>
+        <div class="export-bar">
+          <button class="btn btn-outline" id="exportCsvBtn" style="font-size:.78rem;padding:7px 18px;">&#8659; Download as CSV</button>
+        </div>
+      </div>
+      <div class="stats-panels" id="statsPanels"></div>
+    </div>
+  </div>
+</main>
+<footer id="footer">
+  <div class="container">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">Phil<span>.</span>Ruttley</div>
+        <div class="footer-tagline">IT Support &amp; Systems Engineer — Microsoft 365, Cybersecurity, Automation.</div>
+      </div>
+      <div>
+        <div class="footer-col-title">Navigation</div>
+        <div class="footer-links">
+          <a href="index.html">Portfolio</a>
+          <a href="tools.html">IT Tools Hub</a>
+          <a href="index.html#contact">Contact</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">More Tools</div>
+        <div class="footer-links">
+          <a href="ip-checker.html">IP Checker</a>
+          <a href="domain-security.html">Domain Security</a>
+          <a href="password-generator.html">Password Generator</a>
+          <a href="subnet-calculator.html">Subnet Calculator</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">&#169; 2026 Phil Ruttley. All rights reserved.</div>
+      <div class="footer-status"><span class="footer-status-dot"></span>All systems operational</div>
+    </div>
+  </div>
+</footer>
+<script>
+'use strict';
+const SAMPLES={windows:`Log Name:      Application\nSource:        Application Error\nDate:          2024-01-15 09:23:41\nEvent ID:      1000\nTask Category: (100)\nLevel:         Error\nKeywords:      Classic\nUser:          N/A\nComputer:      WORKSTATION-01\nDescription:   Faulting application name: explorer.exe, version: 10.0.19041.1\n\nLog Name:      System\nSource:        Service Control Manager\nDate:          2024-01-15 09:45:12\nEvent ID:      7036\nTask Category: None\nLevel:         Information\nKeywords:      Classic\nUser:          N/A\nComputer:      WORKSTATION-01\nDescription:   The Windows Update service entered the running state.\n\nLog Name:      Security\nSource:        Microsoft Windows security auditing.\nDate:          2024-01-15 10:01:55\nEvent ID:      4625\nTask Category: Logon\nLevel:         Warning\nKeywords:      Audit Failure\nUser:          DOMAIN\\john.doe\nComputer:      DC-SERVER-01\nDescription:   An account failed to log on. Failure Reason: Unknown user name or bad password.\n\nLog Name:      System\nSource:        Disk\nDate:          2024-01-15 10:15:30\nEvent ID:      11\nTask Category: None\nLevel:         Error\nKeywords:      Classic\nUser:          N/A\nComputer:      SERVER-02\nDescription:   The driver detected a controller error on \\Device\\Harddisk1\\DR1.\n\nLog Name:      Application\nSource:        MSSQLSERVER\nDate:          2024-01-15 10:22:08\nEvent ID:      3417\nTask Category: (2)\nLevel:         Critical\nKeywords:      Classic\nUser:          SYSTEM\nComputer:      DB-SERVER-01\nDescription:   Cannot recover the master database. SQL Server is unable to run.\n\nLog Name:      Security\nSource:        Microsoft Windows security auditing.\nDate:          2024-01-15 10:35:00\nEvent ID:      4740\nTask Category: User Account Management\nLevel:         Warning\nKeywords:      Audit Failure\nUser:          DOMAIN\\admin\nComputer:      DC-SERVER-01\nDescription:   A user account was locked out. Account Name: john.doe\n\nLog Name:      Application\nSource:        Windows Backup\nDate:          2024-01-15 11:00:00\nEvent ID:      4\nTask Category: None\nLevel:         Information\nKeywords:      Classic\nUser:          SYSTEM\nComputer:      SERVER-02\nDescription:   The backup operation started.\n\nLog Name:      System\nSource:        EventLog\nDate:          2024-01-15 11:15:22\nEvent ID:      6008\nTask Category: None\nLevel:         Error\nKeywords:      Classic\nUser:          N/A\nComputer:      WORKSTATION-02\nDescription:   The previous system shutdown was unexpected.\n\nLog Name:      Application\nSource:        .NET Runtime\nDate:          2024-01-15 11:30:45\nEvent ID:      1026\nTask Category: None\nLevel:         Error\nKeywords:      Classic\nUser:          N/A\nComputer:      APP-SERVER-01\nDescription:   Application: MyApp.exe Framework Version: v4.0.30319 Unhandled exception.\n\nLog Name:      System\nSource:        Kernel-Power\nDate:          2024-01-15 12:00:01\nEvent ID:      41\nTask Category: (63)\nLevel:         Critical\nKeywords:      (70368744177664)\nUser:          SYSTEM\nComputer:      WORKSTATION-03\nDescription:   The system has rebooted without cleanly shutting down first.`,syslog:`Jan 15 09:00:01 webserver01 sshd[1234]: Accepted publickey for admin from 192.168.1.100 port 52341 ssh2\nJan 15 09:01:15 webserver01 sudo[1235]: admin : TTY=pts/0 ; PWD=/home/admin ; USER=root ; COMMAND=/usr/bin/apt update\nJan 15 09:05:22 webserver01 kernel: [UFW BLOCK] IN=eth0 OUT= MAC=... SRC=45.33.32.156 DST=192.168.1.10 PROTO=TCP DPT=22\nJan 15 09:10:44 webserver01 sshd[1240]: Failed password for root from 185.220.101.45 port 43210 ssh2\nJan 15 09:10:46 webserver01 sshd[1241]: Failed password for root from 185.220.101.45 port 43211 ssh2\nJan 15 09:10:48 webserver01 sshd[1242]: Failed password for root from 185.220.101.45 port 43212 ssh2\nJan 15 09:15:00 webserver01 CRON[1250]: (root) CMD (/usr/local/bin/backup.sh)\nJan 15 09:20:33 webserver01 nginx[1260]: 2024/01/15 09:20:33 [error] 1260#0: *1234 connect() failed (111: Connection refused)\nJan 15 09:25:01 webserver01 systemd[1]: Started Daily apt download activities.\nJan 15 09:30:15 webserver01 kernel: EXT4-fs error (device sda1): ext4_find_entry:1455: inode #2: comm find: reading directory lblock 0\nJan 15 09:35:22 webserver01 postfix/smtp[1275]: connect to mail.example.com[93.184.216.34]:25: Connection timed out\nJan 15 09:40:01 webserver01 sshd[1280]: Accepted password for deploy from 10.0.0.5 port 54321 ssh2`,apache:`192.168.1.100 - - [15/Jan/2024:09:00:01 +0000] "GET /index.html HTTP/1.1" 200 2326 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"\n10.0.0.5 - - [15/Jan/2024:09:01:15 +0000] "POST /api/login HTTP/1.1" 200 154 "https://example.com/login" "Mozilla/5.0 (Macintosh)"\n45.33.32.156 - - [15/Jan/2024:09:02:30 +0000] "GET /wp-admin/admin-ajax.php HTTP/1.1" 404 217 "-" "sqlmap/1.7.8"\n192.168.1.101 - - [15/Jan/2024:09:05:22 +0000] "GET /images/logo.png HTTP/1.1" 304 0 "https://example.com/" "Chrome/120.0"\n185.220.101.45 - - [15/Jan/2024:09:08:44 +0000] "GET /../../../etc/passwd HTTP/1.1" 400 226 "-" "curl/7.68.0"\n192.168.1.100 - admin [15/Jan/2024:09:10:01 +0000] "GET /admin/users HTTP/1.1" 200 8432 "-" "Mozilla/5.0"\n10.0.0.8 - - [15/Jan/2024:09:12:33 +0000] "POST /api/upload HTTP/1.1" 413 312 "-" "python-requests/2.28.0"\n192.168.1.200 - - [15/Jan/2024:09:15:00 +0000] "GET /robots.txt HTTP/1.1" 200 67 "-" "Googlebot/2.1"\n45.33.32.156 - - [15/Jan/2024:09:18:22 +0000] "GET /phpmyadmin/ HTTP/1.1" 404 287 "-" "Mozilla/5.0"\n192.168.1.100 - - [15/Jan/2024:09:20:45 +0000] "DELETE /api/users/42 HTTP/1.1" 403 89 "-" "axios/1.3.0"\n10.0.0.5 - - [15/Jan/2024:09:25:01 +0000] "GET /api/health HTTP/1.1" 200 45 "-" "HealthCheck/1.0"\n192.168.1.101 - - [15/Jan/2024:09:30:15 +0000] "GET /nonexistent-page HTTP/1.1" 404 196 "-" "Mozilla/5.0"`,iis:`#Software: Microsoft Internet Information Services 10.0\n#Version: 1.0\n#Date: 2024-01-15 09:00:00\n#Fields: date time s-ip cs-method cs-uri-stem cs-uri-query s-port cs-username c-ip cs(User-Agent) sc-status sc-substatus sc-win32-status time-taken\n2024-01-15 09:00:01 192.168.1.10 GET /default.aspx - 443 - 192.168.1.100 Mozilla/5.0+(Windows) 200 0 0 125\n2024-01-15 09:01:15 192.168.1.10 POST /api/authenticate - 443 - 10.0.0.5 curl/7.68.0 200 0 0 88\n2024-01-15 09:02:30 192.168.1.10 GET /admin/config.aspx - 443 DOMAIN\\admin 192.168.1.50 Mozilla/5.0+(Windows) 200 0 0 243\n2024-01-15 09:05:22 192.168.1.10 GET /notfound.html - 80 - 185.220.101.45 python-requests/2.28 404 0 2 15\n2024-01-15 09:08:44 192.168.1.10 GET /login.aspx - 80 - 45.33.32.156 sqlmap/1.7 403 18 5 8\n2024-01-15 09:10:01 192.168.1.10 POST /api/upload - 443 - 192.168.1.100 Mozilla/5.0 500 0 0 3421\n2024-01-15 09:12:33 192.168.1.10 GET /scripts/setup.php - 80 - 45.33.32.156 Nikto/2.1 404 0 2 12\n2024-01-15 09:15:00 192.168.1.10 GET /health - 443 - 10.0.0.1 HealthCheck/1.0 200 0 0 5\n2024-01-15 09:18:22 192.168.1.10 GET /images/banner.jpg - 443 - 192.168.1.101 Mozilla/5.0 200 0 0 45\n2024-01-15 09:20:45 192.168.1.10 DELETE /api/records/99 - 443 DOMAIN\\svc_account 10.0.0.5 axios/1.3 204 0 0 67\n2024-01-15 09:25:01 192.168.1.10 GET /error.aspx - 443 - 192.168.1.100 Mozilla/5.0 500 0 64 892`};
+let allEntries=[],currentFilter='all',currentSearch='';
+function detectFormat(t){if(/^Log Name:/m.test(t)&&/^Event ID:/m.test(t))return'windows';if(/^#Fields:/m.test(t)&&/^#Software:/m.test(t))return'iis';if(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s.+\[.+\]\s+"[A-Z]+\s+\//m.test(t))return'apache';if(/^\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2}\s+\S+\s+\S+.*:/m.test(t))return'syslog';return'unknown'}
+function classifyWindows(l){const s=(l||'').toLowerCase().trim();if(s==='critical')return'critical';if(s==='error')return'error';if(s==='warning')return'warning';return'info'}
+function classifySyslog(p,m){const msg=(m||'').toLowerCase();if(msg.includes('emerg')||msg.includes('panic'))return'critical';if(msg.includes('ext4-fs error')||msg.includes('fs error'))return'critical';if(msg.includes('[ufw block]')||msg.includes('ufw block'))return'warning';if(msg.includes('[error]')||msg.includes('failed')||msg.includes('failure')||msg.includes('refused')||msg.includes('timed out')||msg.includes('error'))return'error';if(msg.includes('warning')||msg.includes('warn'))return'warning';if(msg.includes('accepted')||msg.includes('started')||msg.includes('success'))return'success';return'info'}
+function classifyHttp(s,u,p){const ua=(u||'').toLowerCase(),pt=(p||'').toLowerCase();if(s>=500)return'critical';if(s>=400)return'error';if(s>=300)return'warning';if(s>=200){if(ua.includes('sqlmap')||ua.includes('nikto')||pt.includes('../')||pt.includes('/etc/passwd'))return'warning';return'success'}return'info'}
+const SEC_IDS=new Set(['4625','4740','4648','4719','4964','1102','4698','4702','7045','41','3417']);
+function isWinSec(id,kw,d){if(SEC_IDS.has(id))return true;if((kw||'').toLowerCase().includes('audit failure'))return true;const dd=(d||'').toLowerCase();return dd.includes('failed to log on')||dd.includes('locked out')||dd.includes('password')}
+function isSysSec(p,m){const msg=(m||'').toLowerCase();if(msg.includes('failed password')||msg.includes('invalid user')||msg.includes('authentication failure'))return true;if(msg.includes('[ufw block]')||msg.includes('ufw block'))return true;return false}
+function isHttpSec(s,u,p,m){const ua=(u||'').toLowerCase(),pt=(p||'').toLowerCase();if(ua.includes('sqlmap')||ua.includes('nikto')||ua.includes('masscan')||ua.includes('nmap'))return true;if(pt.includes('../')||pt.includes('/etc/passwd')||pt.includes('phpmyadmin')||pt.includes('wp-admin')||pt.includes('setup.php'))return true;if(s===403||s===401)return true;return false}
+function parseWindows(text){const blocks=text.split(/\n\n(?=Log Name:)/),entries=[];blocks.forEach(block=>{if(!block.includes('Log Name:'))return;const get=k=>{const m=block.match(new RegExp('^'+k+':\\s*(.+)','m'));return m?m[1].trim():''};const level=get('Level'),eventId=get('Event ID'),kw=get('Keywords'),descM=block.match(/^Description:\s*([\s\S]+)/m),desc=descM?descM[1].replace(/\n+/g,' ').trim():'';entries.push({id:entries.length+1,timestamp:get('Date'),level:classifyWindows(level),levelLabel:level||'Info',source:get('Source')||get('Computer'),eventId:eventId||'-',message:desc,raw:block.trim(),isSecAlert:isWinSec(eventId,kw,desc)})});return entries}
+function parseSyslog(text){const lines=text.split('\n').filter(l=>l.trim()),entries=[];lines.forEach(line=>{const m=line.match(/^(\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2})\s+(\S+)\s+(\S+?)(?:\[(\d+)\])?:\s+(.*)$/);if(!m)return;const[,ts,host,proc,pid,msg]=m,lvl=classifySyslog(proc,msg);entries.push({id:entries.length+1,timestamp:ts,level:lvl,levelLabel:lvl.charAt(0).toUpperCase()+lvl.slice(1),source:host+'/'+proc,eventId:pid||'-',message:msg,raw:line,isSecAlert:isSysSec(proc,msg)})});return entries}
+function parseApache(text){const lines=text.split('\n').filter(l=>l.trim()&&!l.startsWith('#')),entries=[];lines.forEach(line=>{const m=line.match(/^(\S+)\s+\S+\s+(\S+)\s+\[([^\]]+)\]\s+"(\S+)\s+(\S+?)(?:\s+\S+)?"\s+(\d+)\s+(\S+)(?:\s+"([^"]*)"\s+"([^"]*)")?/);if(!m)return;const ip=m[1],ts=m[3],method=m[4],path=m[5],status=parseInt(m[6]),ua=m[9]||'-',lvl=classifyHttp(status,ua,path);entries.push({id:entries.length+1,timestamp:ts,level:lvl,levelLabel:'HTTP '+m[6],source:ip,eventId:m[6],message:method+' '+path+' ['+ua.substring(0,40)+']',raw:line,isSecAlert:isHttpSec(status,ua,path,method)})});return entries}
+function parseIIS(text){const lines=text.split('\n');let fields=null;const entries=[];for(const line of lines){const t=line.trim();if(!t)continue;if(t.startsWith('#Fields:')){fields=t.replace('#Fields:','').trim().split(/\s+/);continue}if(t.startsWith('#'))continue;if(!fields)continue;const parts=t.split(/\s+/),f={};fields.forEach((k,i)=>{f[k]=parts[i]||'-'});const status=parseInt(f['sc-status'])||0,method=f['cs-method']||'-',path=f['cs-uri-stem']||'-',clientIp=f['c-ip']||'-',ua=(f['cs(User-Agent)']||'-').replace(/\+/g,' '),ts=(f['date']||'')+' '+(f['time']||''),tt=f['time-taken']||'-',lvl=classifyHttp(status,ua,path);entries.push({id:entries.length+1,timestamp:ts.trim(),level:lvl,levelLabel:'HTTP '+(f['sc-status']||status),source:clientIp,eventId:f['sc-status']||String(status),message:method+' '+path+' ('+tt+'ms) ['+ua.substring(0,32)+']',raw:line,isSecAlert:isHttpSec(status,ua,path,method)})}return entries}
+function parseLog(text){const fmt=detectFormat(text);if(fmt==='windows')return parseWindows(text);if(fmt==='syslog')return parseSyslog(text);if(fmt==='apache')return parseApache(text);if(fmt==='iis')return parseIIS(text);for(const p of[parseWindows,parseSyslog,parseApache,parseIIS]){const r=p(text);if(r.length)return r}return[]}
+function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function countBy(arr,k){return arr.reduce((a,e)=>{a[e[k]]=(a[e[k]]||0)+1;return a},{})}
+function badge(lvl,lbl){return'<span class="badge badge-'+lvl+'">'+escHtml(lbl||lvl)+'</span>'}
+function renderSummary(entries){const c=countBy(entries,'level');document.getElementById('summaryStats').innerHTML='<div class="stat-card stat-total"><div class="stat-number">'+entries.length+'</div><div class="stat-label">Total</div></div><div class="stat-card stat-critical"><div class="stat-number">'+(c.critical||0)+'</div><div class="stat-label">Critical</div></div><div class="stat-card stat-error"><div class="stat-number">'+(c.error||0)+'</div><div class="stat-label">Errors</div></div><div class="stat-card stat-warning"><div class="stat-number">'+(c.warning||0)+'</div><div class="stat-label">Warnings</div></div><div class="stat-card stat-info"><div class="stat-number">'+((c.info||0)+(c.success||0))+'</div><div class="stat-label">Info</div></div>'}
+function renderFilterBar(){const filters=[{k:'all',l:'All'},{k:'critical',l:'Critical'},{k:'error',l:'Error'},{k:'warning',l:'Warning'},{k:'info',l:'Info'},{k:'success',l:'Success'}];document.getElementById('filterBar').innerHTML=filters.map(f=>'<button class="filter-btn'+(currentFilter===f.k?' active':'')+'" data-filter="'+f.k+'">'+f.l+'</button>').join('')+'<input type="text" class="search-input" id="searchInput" placeholder="Search logs..." value="'+escHtml(currentSearch)+'">';document.querySelectorAll('.filter-btn').forEach(b=>b.addEventListener('click',()=>{currentFilter=b.dataset.filter;renderFilterBar();renderTable()}));const si=document.getElementById('searchInput');si.addEventListener('input',()=>{currentSearch=si.value;renderTable()});if(currentSearch)si.focus()}
+function getFiltered(){return allEntries.filter(e=>{const ml=currentFilter==='all'||e.level===currentFilter,q=currentSearch.toLowerCase(),ms=!q||e.message.toLowerCase().includes(q)||e.source.toLowerCase().includes(q)||e.timestamp.toLowerCase().includes(q)||e.eventId.toLowerCase().includes(q);return ml&&ms})}
+function renderTable(){const tbody=document.getElementById('logTableBody'),filtered=getFiltered();if(!filtered.length){tbody.innerHTML='<tr><td colspan="6" class="no-entries">No log entries match the current filter.</td></tr>';return}tbody.innerHTML=filtered.map(e=>'<tr class="log-row row-'+e.level+'" data-id="'+e.id+'"><td class="td-num">'+e.id+'</td><td class="td-ts">'+escHtml(e.timestamp)+'</td><td>'+badge(e.level,e.levelLabel)+'</td><td class="td-src" title="'+escHtml(e.source)+'">'+escHtml(e.source)+'</td><td class="td-msg" style="max-width:72px">'+escHtml(e.eventId)+'</td><td class="td-msg" title="'+escHtml(e.message)+'">'+escHtml(e.message.length>85?e.message.substring(0,85)+'...':e.message)+'</td></tr>').join('');tbody.querySelectorAll('.log-row').forEach(row=>row.addEventListener('click',()=>{const next=row.nextElementSibling;if(next&&next.classList.contains('expanded-row')){next.remove();return}const entry=allEntries.find(e=>e.id===parseInt(row.dataset.id));if(!entry)return;const tr=document.createElement('tr');tr.className='expanded-row';tr.innerHTML='<td colspan="6"><div class="expanded-content">'+escHtml(entry.raw)+'</div></td>';row.insertAdjacentElement('afterend',tr)}))}
+function barRow(label,cnt,max,cls){const pct=max>0?Math.max(cnt>0?3:0,(cnt/max*100)).toFixed(1):'0';return'<div class="bar-row"><div class="bar-label" title="'+escHtml(label)+'">'+escHtml(label)+'</div><div class="bar-track"><div class="bar-fill '+(cls||'')+'" style="width:'+pct+'%"></div></div><div class="bar-value">'+cnt+'</div></div>'}
+function renderStats(entries){const srcC=countBy(entries,'source'),topSrc=Object.entries(srcC).sort((a,b)=>b[1]-a[1]).slice(0,5),maxSrc=topSrc.length?topSrc[0][1]:1,srcHtml=topSrc.length?topSrc.map(([s,c])=>barRow(s,c,maxSrc,'')).join(''):'<div class="empty-panel">No data.</div>';const SEVS=[{k:'critical',l:'Critical',c:'fill-critical'},{k:'error',l:'Error',c:'fill-error'},{k:'warning',l:'Warning',c:'fill-warning'},{k:'success',l:'Success',c:'fill-success'},{k:'info',l:'Info',c:''}],lvlC=countBy(entries,'level'),maxLvl=Math.max(...SEVS.map(s=>lvlC[s.k]||0),1),sevHtml=SEVS.map(s=>barRow(s.l,lvlC[s.k]||0,maxLvl,s.c)).join('');const secE=entries.filter(e=>e.isSecAlert),secHtml=secE.length?secE.slice(0,8).map(e=>'<div class="alert-item"><div class="alert-dot'+(e.level==='warning'?' warn':'')+'"></div><div class="alert-text"><strong>'+escHtml(e.timestamp)+'</strong> - '+escHtml(e.source)+'<br>'+escHtml(e.message.length>90?e.message.substring(0,90)+'...':e.message)+'</div></div>').join(''):'<div class="empty-panel">No security alerts detected.</div>';document.getElementById('statsPanels').innerHTML='<div class="card"><div class="stats-panel-title">Top Sources</div>'+srcHtml+'</div><div class="card"><div class="stats-panel-title">Severity Distribution</div>'+sevHtml+'</div><div class="card security-alerts-full"><div class="stats-panel-title">&#9888; Security Alerts</div>'+secHtml+'</div>'}
+function showResults(){document.getElementById('results').style.display='block';renderSummary(allEntries);renderFilterBar();renderTable();renderStats(allEntries);document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'})}
+function exportCSV(){const filtered=getFiltered(),header=['#','Timestamp','Level','Source','EventID','Message'],rows=filtered.map(e=>[e.id,'"'+e.timestamp+'"',e.level,'"'+e.source.replace(/"/g,'""')+'"','"'+e.eventId.replace(/"/g,'""')+'"','"'+e.message.replace(/"/g,'""')+'"']),csv=[header,...rows].map(r=>r.join(',')).join('\n'),blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='log-analysis.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
+document.getElementById('analyzeBtn').addEventListener('click',()=>{const text=document.getElementById('logInput').value.trim();if(!text){document.getElementById('logInput').focus();return}currentFilter='all';currentSearch='';allEntries=parseLog(text);if(!allEntries.length){alert('Could not parse log data. Supported formats: Windows Event Log, Syslog, Apache, IIS.');return}showResults()});
+document.getElementById('clearBtn').addEventListener('click',()=>{document.getElementById('logInput').value='';document.getElementById('results').style.display='none';allEntries=[];currentFilter='all';currentSearch=''});
+document.getElementById('loadSampleBtn').addEventListener('click',()=>{const fmt=document.getElementById('sampleSelect').value;if(SAMPLES[fmt])document.getElementById('logInput').value=SAMPLES[fmt]});
+document.getElementById('exportCsvBtn').addEventListener('click',exportCSV);
+document.getElementById('hamburger').addEventListener('click',()=>document.getElementById('navMobile').classList.toggle('open'));
+window.addEventListener('scroll',()=>document.getElementById('navbar').classList.toggle('scrolled',window.scrollY>20),{passive:true});
+</script>
+</body>
+</html>

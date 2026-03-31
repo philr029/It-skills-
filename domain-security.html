@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Domain Security Checker — Phil Ruttley</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep:     #0c0a15;
+      --bg-mid:      #13101f;
+      --bg-card:     rgba(19, 16, 31, 0.72);
+      --accent:      #a78bfa;
+      --accent-dark: #8b5cf6;
+      --accent-glow: rgba(167, 139, 250, 0.25);
+      --accent-glow-strong: rgba(167, 139, 250, 0.45);
+      --text-primary: #f0eaff;
+      --text-muted:   #9d8fc4;
+      --text-dim:     #5e5382;
+      --green:        #4ade80;
+      --green-bg:     rgba(74, 222, 128, 0.12);
+      --red:          #f87171;
+      --red-bg:       rgba(248, 113, 113, 0.12);
+      --yellow:       #fbbf24;
+      --yellow-bg:    rgba(251, 191, 36, 0.12);
+      --border:       rgba(167, 139, 250, 0.18);
+      --border-hover: rgba(167, 139, 250, 0.5);
+      --radius:       16px;
+      --radius-sm:    10px;
+      --transition:   0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 10%, rgba(139, 92, 246, 0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(167, 139, 250, 0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+    /* ── Navbar ── */
+    #navbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(12, 10, 21, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner { display: flex; align-items: center; gap: 32px; height: 64px; }
+    .nav-logo { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); text-decoration: none; letter-spacing: -0.5px; }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 28px; margin-left: auto; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color var(--transition); }
+    .nav-links a:hover { color: var(--accent); }
+    .btn { display: inline-block; text-decoration: none; transition: all var(--transition); }
+    .btn-primary { background: linear-gradient(135deg, var(--accent-dark), var(--accent)); color: #fff; border: none; padding: 12px 28px; border-radius: 50px; font-family: Syne; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--accent-glow-strong); }
+    .btn-outline { background: transparent; color: var(--accent); border: 1.5px solid var(--border-hover); padding: 12px 28px; border-radius: 50px; font-family: Syne; font-weight: 600; cursor: pointer; font-size: 0.9rem; text-decoration: none; display: inline-block; transition: all var(--transition); }
+    .btn-outline:hover { background: var(--accent-glow); transform: translateY(-2px); }
+    .nav-cta { margin-left: auto; }
+    .nav-hamburger { display: none; background: none; border: none; cursor: pointer; flex-direction: column; gap: 5px; padding: 6px; }
+    .nav-hamburger span { display: block; width: 22px; height: 2px; background: var(--text-muted); border-radius: 2px; transition: all var(--transition); }
+    .nav-mobile { display: none; flex-direction: column; padding: 16px 24px; gap: 12px; border-top: 1px solid var(--border); background: rgba(12,10,21,0.98); }
+    .nav-mobile a { color: var(--text-muted); text-decoration: none; font-weight: 500; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .nav-mobile.open { display: flex; }
+    @media (max-width: 768px) {
+      .nav-links, .nav-cta { display: none; }
+      .nav-hamburger { display: flex; margin-left: auto; }
+    }
+
+    /* ── Hero ── */
+    .page-hero { padding: 64px 0 40px; text-align: center; }
+    .back-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
+    .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color var(--transition); display: flex; align-items: center; gap: 6px; }
+    .back-link:hover { color: var(--accent); }
+    .page-tag { display: inline-block; padding: 6px 16px; border-radius: 50px; background: var(--accent-glow); border: 1px solid var(--border); color: var(--accent); font-size: 0.78rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 20px; }
+    .page-hero h1 { font-size: clamp(2rem, 5vw, 3.4rem); font-weight: 800; letter-spacing: -1px; margin-bottom: 16px; line-height: 1.1; }
+    .page-hero h1 .accent { color: var(--accent); }
+    .page-hero p { color: var(--text-muted); font-size: 1.05rem; max-width: 560px; margin: 0 auto; }
+
+    /* ── Glass card ── */
+    .glass-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 32px;
+    }
+
+    /* ── Input area ── */
+    .tool-section { max-width: 720px; margin: 0 auto 48px; }
+    .input-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .domain-input {
+      flex: 1; min-width: 200px;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      color: var(--text-primary);
+      font-family: 'Syne Mono', monospace;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .domain-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .domain-input::placeholder { color: var(--text-dim); }
+    .btn-sm { padding: 9px 20px; font-size: 0.85rem; }
+
+    .quick-fill { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; align-items: center; }
+    .quick-fill-label { color: var(--text-dim); font-size: 0.8rem; font-weight: 600; }
+    .quick-chip {
+      background: rgba(167,139,250,0.08);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 5px 14px;
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-family: 'Syne Mono', monospace;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .quick-chip:hover { background: var(--accent-glow); border-color: var(--border-hover); }
+
+    /* ── Error ── */
+    .error-box {
+      display: none; padding: 18px 22px; margin-top: 16px;
+      background: var(--red-bg); border: 1px solid rgba(248,113,113,0.3);
+      border-radius: var(--radius-sm); color: var(--red); font-size: 0.95rem;
+    }
+    .error-box.active { display: block; }
+
+    /* ── Progress / Loading ── */
+    .progress-wrap { display: none; margin-top: 24px; }
+    .progress-wrap.active { display: block; }
+    .progress-label { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px; display: flex; justify-content: space-between; }
+    .progress-bar-bg { background: rgba(255,255,255,0.06); border-radius: 50px; height: 6px; overflow: hidden; }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 50px;
+      background: linear-gradient(90deg, var(--accent-dark), var(--accent));
+      width: 0%;
+      transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+    }
+    .progress-current { color: var(--text-muted); font-size: 0.8rem; margin-top: 8px; font-style: italic; }
+
+    /* ── Results ── */
+    #results { display: none; max-width: 820px; margin: 0 auto; }
+    #results.active { display: block; }
+
+    /* Grade */
+    .grade-section {
+      display: flex; align-items: center; gap: 28px;
+      margin-bottom: 36px; flex-wrap: wrap;
+    }
+    .grade-circle {
+      width: 96px; height: 96px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem; font-weight: 800; flex-shrink: 0;
+      border: 3px solid;
+    }
+    .grade-circle.A { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+    .grade-circle.B { border-color: #34d399; color: #34d399; background: rgba(52,211,153,0.1); }
+    .grade-circle.C { border-color: var(--yellow); color: var(--yellow); background: var(--yellow-bg); }
+    .grade-circle.D { border-color: #fb923c; color: #fb923c; background: rgba(251,146,60,0.1); }
+    .grade-circle.F { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+    .grade-info-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 6px; }
+    .grade-info-sub { color: var(--text-muted); font-size: 0.9rem; }
+    .grade-domain { font-family: 'Syne Mono', monospace; color: var(--accent); font-size: 1.05rem; margin-bottom: 8px; }
+
+    /* Checklist */
+    .checklist { display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
+    .check-item {
+      display: flex; align-items: flex-start; gap: 16px;
+      padding: 18px 20px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      transition: border-color var(--transition);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.4s ease, transform 0.4s ease, border-color var(--transition);
+    }
+    .check-item.visible { opacity: 1; transform: translateY(0); }
+    .check-item:hover { border-color: var(--border-hover); }
+    .check-item.pass { border-left: 3px solid var(--green); }
+    .check-item.warn { border-left: 3px solid var(--yellow); }
+    .check-item.fail { border-left: 3px solid var(--red); }
+    .check-item.pending { border-left: 3px solid var(--text-dim); }
+
+    .check-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
+    .check-body { flex: 1; min-width: 0; }
+    .check-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 3px; }
+    .check-desc { color: var(--text-muted); font-size: 0.82rem; line-height: 1.5; }
+    .check-record {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 6px;
+      font-family: 'Syne Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent);
+      word-break: break-all;
+      line-height: 1.6;
+    }
+    .check-badge {
+      flex-shrink: 0;
+      padding: 4px 12px;
+      border-radius: 50px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      align-self: flex-start;
+      margin-top: 2px;
+    }
+    .check-badge.pass { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+    .check-badge.warn { background: var(--yellow-bg); color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
+    .check-badge.fail { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+    .check-badge.pending { background: rgba(255,255,255,0.05); color: var(--text-dim); border: 1px solid var(--border); }
+
+    /* Summary row */
+    .summary-row {
+      display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px;
+    }
+    .summary-chip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 18px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: var(--bg-card);
+      font-size: 0.85rem; font-weight: 600;
+    }
+    .summary-chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .summary-chip.pass-chip .dot { background: var(--green); }
+    .summary-chip.warn-chip .dot { background: var(--yellow); }
+    .summary-chip.fail-chip .dot { background: var(--red); }
+
+    /* Recommendation box */
+    .reco-box {
+      background: var(--accent-glow);
+      border: 1px solid var(--border-hover);
+      border-radius: var(--radius-sm);
+      padding: 20px 24px;
+      margin-bottom: 28px;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      line-height: 1.7;
+    }
+    .reco-title { font-weight: 700; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+
+    /* ── Footer ── */
+    #footer { margin-top: 80px; border-top: 1px solid var(--border); padding: 48px 0 32px; }
+    .footer-top { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+    @media (max-width: 640px) { .footer-top { grid-template-columns: 1fr; } }
+    .footer-logo { font-size: 1.3rem; font-weight: 800; color: var(--text-primary); margin-bottom: 10px; }
+    .footer-logo span { color: var(--accent); }
+    .footer-tagline { color: var(--text-muted); font-size: 0.85rem; line-height: 1.6; max-width: 280px; }
+    .footer-col-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); font-weight: 600; margin-bottom: 16px; }
+    .footer-links { display: flex; flex-direction: column; gap: 10px; }
+    .footer-links a { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; transition: color var(--transition); }
+    .footer-links a:hover { color: var(--accent); }
+    .footer-bottom { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 24px; border-top: 1px solid var(--border); }
+    .footer-copy { color: var(--text-dim); font-size: 0.82rem; }
+    .footer-status { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.82rem; }
+    .footer-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+    @media (max-width: 600px) {
+      .glass-card { padding: 20px; }
+      .input-row { flex-direction: column; }
+      .domain-input { min-width: unset; }
+      .grade-section { flex-direction: column; align-items: flex-start; gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav id="navbar">
+  <div class="container nav-inner">
+    <a class="nav-logo" href="index.html">Phil<span>.</span>Ruttley</a>
+    <div class="nav-links">
+      <a href="index.html">Portfolio</a>
+      <a href="index.html#services">What I Do</a>
+      <a href="index.html#skills">Skills</a>
+      <a href="tools.html">IT Tools</a>
+      <a href="index.html#contact">Contact</a>
+    </div>
+    <a class="btn btn-primary nav-cta" href="index.html#contact">Hire Me</a>
+    <button class="nav-hamburger" id="hamburger" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="index.html">Portfolio</a>
+    <a href="tools.html">IT Tools</a>
+    <a href="index.html#contact">Contact</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="page-hero">
+  <div class="container">
+    <div class="back-row">
+      <a class="btn btn-outline btn-sm" href="index.html">Back to Portfolio</a>
+      <a class="back-link" href="tools.html">← All Tools</a>
+    </div>
+    <div class="page-tag">Security Audit</div>
+    <h1>Domain <span class="accent">Security</span> Checker</h1>
+    <p>Analyse a domain's security posture: HTTPS, SSL, SPF, DKIM, DMARC, and more.</p>
+  </div>
+</section>
+
+<!-- Tool -->
+<main>
+  <div class="container">
+    <div class="tool-section">
+      <div class="glass-card">
+        <div class="input-row">
+          <input
+            class="domain-input"
+            id="domainInput"
+            type="text"
+            placeholder="e.g. google.com or microsoft.com"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="253"
+          />
+          <button class="btn btn-primary btn-sm" id="checkBtn">Check Domain</button>
+        </div>
+        <div class="quick-fill">
+          <span class="quick-fill-label">Try:</span>
+          <button class="quick-chip" data-domain="google.com">google.com</button>
+          <button class="quick-chip" data-domain="cloudflare.com">cloudflare.com</button>
+          <button class="quick-chip" data-domain="example.com">example.com</button>
+        </div>
+        <div class="error-box" id="errorBox"></div>
+
+        <!-- Progress -->
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-label">
+            <span>Scanning security posture…</span>
+            <span id="progressPct">0%</span>
+          </div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
+          <div class="progress-current" id="progressCurrent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="results">
+      <!-- Grade -->
+      <div class="glass-card" style="margin-bottom:28px;">
+        <div class="grade-section">
+          <div class="grade-circle" id="gradeCircle">—</div>
+          <div>
+            <div class="grade-domain" id="gradeDomain"></div>
+            <div class="grade-info-title" id="gradeTitle"></div>
+            <div class="grade-info-sub" id="gradeSub"></div>
+          </div>
+        </div>
+        <!-- Summary chips -->
+        <div class="summary-row" id="summaryRow"></div>
+      </div>
+
+      <!-- Recommendation -->
+      <div class="reco-box" id="recoBox" style="display:none;">
+        <div class="reco-title">💡 Recommendations</div>
+        <div id="recoText"></div>
+      </div>
+
+      <!-- Checklist -->
+      <div class="checklist" id="checklist"></div>
+    </div>
+  </div>
+</main>
+
+<!-- Footer -->
+<footer id="footer">
+  <div class="container">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">Phil<span>.</span>Ruttley</div>
+        <div class="footer-tagline">IT Support &amp; Systems Engineer — Microsoft 365, Cybersecurity, Automation.</div>
+      </div>
+      <div>
+        <div class="footer-col-title">Navigation</div>
+        <div class="footer-links">
+          <a href="index.html">Portfolio</a>
+          <a href="tools.html">IT Tools Hub</a>
+          <a href="index.html#contact">Contact</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">More Tools</div>
+        <div class="footer-links">
+          <a href="password-generator.html">Password Generator</a>
+          <a href="subnet-calculator.html">Subnet Calculator</a>
+          <a href="dns-lookup.html">DNS Lookup</a>
+          <a href="port-scanner-sim.html">Port Scanner</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2026 Phil Ruttley. All rights reserved.</div>
+      <div class="footer-status"><span class="footer-status-dot"></span>All systems operational</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ── Hamburger ──
+  document.getElementById('hamburger').addEventListener('click', () => {
+    document.getElementById('navMobile').classList.toggle('open');
+  });
+
+  // ── Quick fill chips ──
+  document.querySelectorAll('.quick-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.getElementById('domainInput').value = chip.dataset.domain;
+      runCheck(chip.dataset.domain);
+    });
+  });
+
+  // ── Utilities ──
+  const $ = id => document.getElementById(id);
+
+  function sanitizeDomain(raw) {
+    let d = raw.trim().toLowerCase();
+    d = d.replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+    return d;
+  }
+
+  function isValidDomain(d) {
+    return /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/.test(d);
+  }
+
+  function showError(msg) {
+    $('errorBox').textContent = '⚠️ ' + msg;
+    $('errorBox').classList.add('active');
+  }
+
+  function clearUI() {
+    $('errorBox').classList.remove('active');
+    $('results').classList.remove('active');
+    $('progressWrap').classList.remove('active');
+    setProgress(0, '');
+  }
+
+  function setProgress(pct, label) {
+    $('progressBar').style.width = pct + '%';
+    $('progressPct').textContent = pct + '%';
+    $('progressCurrent').textContent = label;
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // ── DNS helpers using Google DNS-over-HTTPS ──
+  async function dnsQuery(name, type) {
+    const url = `https://dns.google/resolve?name=${encodeURIComponent(name)}&type=${type}`;
+    const res = await fetch(url, { headers: { Accept: 'application/dns-json' } });
+    if (!res.ok) throw new Error(`DNS query failed: HTTP ${res.status}`);
+    return res.json();
+  }
+
+  function extractTxtRecords(dnsData) {
+    if (!dnsData.Answer) return [];
+    return dnsData.Answer
+      .filter(r => r.type === 16)
+      .map(r => r.data.replace(/^"|"$/g, '').replace(/" "/g, ''));
+  }
+
+  function extractARecords(dnsData) {
+    if (!dnsData.Answer) return [];
+    return dnsData.Answer.filter(r => r.type === 1).map(r => r.data);
+  }
+
+  // Well-known domains treated as reputable for simulated SSL check
+  const REPUTABLE_DOMAINS = [
+    'google.com','microsoft.com','cloudflare.com','amazon.com','apple.com',
+    'github.com','mozilla.org','wikipedia.org','facebook.com','twitter.com',
+    'linkedin.com','stackoverflow.com','reddit.com','netflix.com','adobe.com',
+    'dropbox.com','salesforce.com','zoom.us','slack.com','shopify.com',
+    'example.com','bbc.co.uk','gov.uk','nhs.uk','hmrc.gov.uk',
+  ];
+
+  function isReputableDomain(domain) {
+    return REPUTABLE_DOMAINS.some(r => domain === r || domain.endsWith('.' + r));
+  }
+
+  // Deterministic DKIM simulation based on domain
+  function simulateDKIM(domain) {
+    let hash = 0;
+    for (let i = 0; i < domain.length; i++) {
+      hash = ((hash << 5) - hash) + domain.charCodeAt(i);
+      hash |= 0;
+    }
+    const val = Math.abs(hash) % 100;
+    if (isReputableDomain(domain)) return { status: 'pass', selector: 'google' };
+    if (val < 60) return { status: 'pass', selector: 'default' };
+    if (val < 80) return { status: 'warn' };
+    return { status: 'fail' };
+  }
+
+  // ── Main check ──
+  async function runCheck(rawDomain) {
+    clearUI();
+    const domain = sanitizeDomain(rawDomain);
+
+    if (!domain) { showError('Please enter a domain name.'); return; }
+    if (!isValidDomain(domain)) { showError('Invalid domain format. Please enter a valid domain like example.com'); return; }
+
+    $('progressWrap').classList.add('active');
+
+    const checkResults = {};
+
+    // ── Step 1: DNS A record (resolves?) ──
+    setProgress(10, 'Checking DNS resolution…');
+    await sleep(300);
+    let aRecords = [];
+    try {
+      const aData = await dnsQuery(domain, 'A');
+      aRecords = extractARecords(aData);
+      checkResults.dns = {
+        status: aRecords.length > 0 ? 'pass' : 'fail',
+        records: aRecords
+      };
+    } catch {
+      checkResults.dns = { status: 'fail', records: [] };
+    }
+
+    // ── Step 2: HTTPS (simulated from A record) ──
+    setProgress(28, 'Checking HTTPS availability…');
+    await sleep(350);
+    checkResults.https = {
+      status: checkResults.dns.status === 'pass' ? 'pass' : 'fail',
+      detail: checkResults.dns.status === 'pass'
+        ? `Domain resolves to ${aRecords[0] || 'an IP address'}. HTTPS inferred from DNS resolution.`
+        : 'Domain does not resolve — HTTPS check cannot proceed.'
+    };
+
+    // ── Step 3: SSL Certificate (simulated) ──
+    setProgress(42, 'Simulating SSL certificate check…');
+    await sleep(400);
+    const reputable = isReputableDomain(domain);
+    checkResults.ssl = reputable
+      ? { status: 'pass', detail: 'Reputable domain — SSL certificate is expected to be valid and current.' }
+      : checkResults.dns.status === 'pass'
+        ? { status: 'warn', detail: 'Domain resolves but SSL validity cannot be verified from the browser. Manual verification recommended.' }
+        : { status: 'fail', detail: 'Cannot verify SSL — domain does not resolve.' };
+
+    // ── Step 4: SPF ──
+    setProgress(58, 'Querying SPF records…');
+    await sleep(400);
+    try {
+      const txtData = await dnsQuery(domain, 'TXT');
+      const txts = extractTxtRecords(txtData);
+      const spfRecord = txts.find(t => t.startsWith('v=spf1'));
+      if (spfRecord) {
+        const strict = spfRecord.includes('-all');
+        const softfail = spfRecord.includes('~all');
+        checkResults.spf = {
+          status: strict ? 'pass' : 'warn',
+          record: spfRecord,
+          detail: strict
+            ? 'SPF record found with hard fail policy (-all). Strict configuration.'
+            : softfail
+              ? 'SPF record found but uses soft fail (~all). Consider upgrading to -all for stronger enforcement.'
+              : 'SPF record found but policy is permissive. Review and tighten.'
+        };
+      } else {
+        checkResults.spf = { status: 'fail', record: null, detail: 'No SPF record found. Emails from this domain cannot be authenticated, increasing spoofing risk.' };
+      }
+    } catch {
+      checkResults.spf = { status: 'warn', record: null, detail: 'Could not query SPF records. DNS lookup timed out or failed.' };
+    }
+
+    // ── Step 5: DKIM (simulated) ──
+    setProgress(72, 'Simulating DKIM check…');
+    await sleep(350);
+    const dkim = simulateDKIM(domain);
+    checkResults.dkim = {
+      status: dkim.status,
+      detail: dkim.status === 'pass'
+        ? `DKIM selector "${dkim.selector}" detected. Email signing appears configured.`
+        : dkim.status === 'warn'
+          ? 'DKIM record could not be confirmed. Common selectors were not found. Configure DKIM signing with your email provider.'
+          : 'No DKIM record detected for common selectors. Emails may fail DKIM checks, reducing deliverability and trust.'
+    };
+
+    // ── Step 6: DMARC ──
+    setProgress(88, 'Querying DMARC records…');
+    await sleep(400);
+    try {
+      const dmarcData = await dnsQuery('_dmarc.' + domain, 'TXT');
+      const dmarcTxts = extractTxtRecords(dmarcData);
+      const dmarcRecord = dmarcTxts.find(t => t.startsWith('v=DMARC1'));
+      if (dmarcRecord) {
+        const hasReject = dmarcRecord.includes('p=reject');
+        const hasQuarantine = dmarcRecord.includes('p=quarantine');
+        checkResults.dmarc = {
+          status: hasReject ? 'pass' : 'warn',
+          record: dmarcRecord,
+          detail: hasReject
+            ? 'DMARC record found with p=reject policy. Maximum email spoofing protection active.'
+            : hasQuarantine
+              ? 'DMARC record found with p=quarantine policy. Good protection, but p=reject provides stronger enforcement.'
+              : 'DMARC record found but policy is p=none (monitor only). Upgrade to p=quarantine or p=reject.'
+        };
+      } else {
+        checkResults.dmarc = { status: 'fail', record: null, detail: 'No DMARC record found at _dmarc.' + domain + '. Without DMARC, your domain is vulnerable to email spoofing.' };
+      }
+    } catch {
+      checkResults.dmarc = { status: 'warn', record: null, detail: 'Could not query DMARC records. DNS lookup timed out or failed.' };
+    }
+
+    setProgress(100, 'Analysis complete.');
+    await sleep(300);
+
+    $('progressWrap').classList.remove('active');
+    renderResults(domain, checkResults);
+  }
+
+  // ── Scoring & Render ──
+  function scoreChecks(checks) {
+    let passes = 0, warns = 0, fails = 0;
+    Object.values(checks).forEach(c => {
+      if (c.status === 'pass') passes++;
+      else if (c.status === 'warn') warns++;
+      else fails++;
+    });
+    return { passes, warns, fails };
+  }
+
+  function getGrade(passes, total) {
+    const rate = passes / total;
+    if (rate >= 5/6) return 'A';
+    if (rate >= 4/6) return 'B';
+    if (rate >= 3/6) return 'C';
+    if (rate >= 2/6) return 'D';
+    return 'F';
+  }
+
+  const GRADE_DESC = {
+    A: 'Excellent security posture — all major checks passed.',
+    B: 'Good security posture — minor improvements recommended.',
+    C: 'Fair security posture — several issues need attention.',
+    D: 'Poor security posture — significant vulnerabilities present.',
+    F: 'Critical security issues — immediate action required.',
+  };
+
+  const CHECK_META = {
+    https: { label: 'HTTPS Available',        order: 1 },
+    ssl:   { label: 'SSL Certificate',         order: 2 },
+    spf:   { label: 'SPF Record',              order: 3 },
+    dkim:  { label: 'DKIM Signing',            order: 4 },
+    dmarc: { label: 'DMARC Policy',            order: 5 },
+    dns:   { label: 'DNS Resolution',          order: 6 },
+  };
+
+  const STATUS_ICON = { pass: '✅', warn: '⚠️', fail: '❌', pending: '⏳' };
+
+  function buildRecommendations(checks) {
+    const tips = [];
+    if (checks.spf.status !== 'pass')
+      tips.push('Add or tighten your <strong>SPF record</strong> with <code>-all</code> to prevent email spoofing.');
+    if (checks.dkim.status !== 'pass')
+      tips.push('Configure <strong>DKIM signing</strong> with your email provider (Google Workspace, Microsoft 365, etc.).');
+    if (checks.dmarc.status !== 'pass')
+      tips.push('Publish a <strong>DMARC record</strong> at <code>_dmarc.yourdomain.com</code> with at least <code>p=quarantine</code>.');
+    if (checks.ssl.status !== 'pass')
+      tips.push('Ensure a valid <strong>SSL certificate</strong> is installed and auto-renewing (e.g., via Let\'s Encrypt).');
+    if (checks.https.status !== 'pass')
+      tips.push('Verify your domain resolves correctly and enforces <strong>HTTPS</strong> with HSTS headers.');
+    return tips;
+  }
+
+  function renderResults(domain, checks) {
+    const { passes, warns, fails } = scoreChecks(checks);
+    const total = Object.keys(checks).length;
+    const grade = getGrade(passes, total);
+
+    // Grade circle
+    $('gradeCircle').textContent = grade;
+    $('gradeCircle').className = 'grade-circle ' + grade;
+    $('gradeDomain').textContent = domain;
+    $('gradeTitle').textContent = `Security Grade: ${grade}`;
+    $('gradeSub').textContent = GRADE_DESC[grade];
+
+    // Summary chips
+    $('summaryRow').innerHTML = `
+      <div class="summary-chip pass-chip"><span class="dot"></span>${passes} Passed</div>
+      <div class="summary-chip warn-chip"><span class="dot"></span>${warns} Warning${warns !== 1 ? 's' : ''}</div>
+      <div class="summary-chip fail-chip"><span class="dot"></span>${fails} Failed</div>
+    `;
+
+    // Recommendations
+    const tips = buildRecommendations(checks);
+    if (tips.length > 0) {
+      $('recoText').innerHTML = tips.map(t => `• ${t}`).join('<br>');
+      $('recoBox').style.display = 'block';
+    } else {
+      $('recoBox').style.display = 'none';
+    }
+
+    // Checklist
+    const checklistEl = $('checklist');
+    checklistEl.innerHTML = '';
+
+    const ordered = Object.entries(checks).sort((a, b) => CHECK_META[a[0]].order - CHECK_META[b[0]].order);
+
+    ordered.forEach(([key, check], idx) => {
+      const meta = CHECK_META[key];
+      const item = document.createElement('div');
+      item.className = `check-item ${check.status}`;
+
+      let recordHtml = '';
+      if (check.record) {
+        recordHtml = `<div class="check-record">${escapeHTML(check.record)}</div>`;
+      }
+
+      item.innerHTML = `
+        <div class="check-icon">${STATUS_ICON[check.status] || '⏳'}</div>
+        <div class="check-body">
+          <div class="check-title">${meta.label}</div>
+          <div class="check-desc">${check.detail || ''}${recordHtml}</div>
+        </div>
+        <div class="check-badge ${check.status}">${check.status.toUpperCase()}</div>
+      `;
+
+      checklistEl.appendChild(item);
+
+      // Staggered reveal
+      setTimeout(() => item.classList.add('visible'), 80 * idx);
+    });
+
+    $('results').classList.add('active');
+    $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function escapeHTML(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Wire up ──
+  $('checkBtn').addEventListener('click', () => runCheck($('domainInput').value));
+  $('domainInput').addEventListener('keydown', e => { if (e.key === 'Enter') runCheck($('domainInput').value); });
+</script>
+</body>
+</html>

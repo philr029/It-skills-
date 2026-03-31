@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Port Scanner Simulator | Phil Ruttley</title>
+  <meta name="description" content="A browser-based port scanning simulation for portfolio and educational purposes. No actual network scanning is performed." />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-deep:     #0c0a15;
+      --bg-mid:      #13101f;
+      --bg-card:     rgba(19, 16, 31, 0.72);
+      --accent:      #a78bfa;
+      --accent-dark: #8b5cf6;
+      --accent-glow: rgba(167, 139, 250, 0.25);
+      --text-primary: #f0eaff;
+      --text-muted:   #9d8fc4;
+      --text-dim:     #5e5382;
+      --green:        #4ade80;
+      --green-bg:     rgba(74, 222, 128, 0.12);
+      --red:          #f87171;
+      --red-bg:       rgba(248, 113, 113, 0.12);
+      --yellow:       #fbbf24;
+      --yellow-bg:    rgba(251, 191, 36, 0.12);
+      --border:       rgba(167, 139, 250, 0.18);
+      --border-hover: rgba(167, 139, 250, 0.5);
+      --radius:       16px;
+      --radius-sm:    10px;
+      --transition:   0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      line-height: 1.6;
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Navbar ── */
+    #navbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(12, 10, 21, 0.88);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner { display: flex; align-items: center; gap: 32px; padding: 18px 24px; }
+    .nav-logo { font-size: 1.3rem; font-weight: 800; color: var(--text-primary); text-decoration: none; margin-right: auto; }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 28px; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.92rem; font-weight: 500; transition: color var(--transition); }
+    .nav-links a:hover { color: var(--accent); }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 22px; border-radius: var(--radius-sm);
+      font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; text-decoration: none; border: none;
+      transition: all var(--transition);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+      color: #fff; box-shadow: 0 4px 18px var(--accent-glow);
+    }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 28px var(--accent-glow); }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-outline {
+      background: transparent; color: var(--accent);
+      border: 1.5px solid var(--border-hover);
+    }
+    .btn-outline:hover:not(:disabled) { background: var(--accent-glow); transform: translateY(-2px); }
+    .btn-outline:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-danger {
+      background: var(--red-bg); color: var(--red);
+      border: 1.5px solid rgba(248,113,113,0.35);
+    }
+    .btn-danger:hover:not(:disabled) { background: rgba(248,113,113,0.22); }
+    .btn-danger:disabled { opacity: 0.35; cursor: not-allowed; }
+    .nav-cta { padding: 8px 18px; }
+    .nav-hamburger { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 4px; }
+    .nav-hamburger span { display: block; width: 24px; height: 2px; background: var(--text-muted); border-radius: 2px; }
+    .nav-mobile { display: none; flex-direction: column; gap: 0; background: var(--bg-mid); border-top: 1px solid var(--border); }
+    .nav-mobile a { padding: 14px 24px; color: var(--text-muted); text-decoration: none; font-weight: 500; border-bottom: 1px solid var(--border); }
+    .nav-mobile.open { display: flex; }
+    @media (max-width: 768px) { .nav-links, .nav-cta { display: none; } .nav-hamburger { display: flex; } }
+
+    /* ── Simulation Banner ── */
+    .sim-banner {
+      background: rgba(251, 191, 36, 0.10);
+      border: 1.5px solid rgba(251, 191, 36, 0.35);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      display: flex; align-items: flex-start; gap: 14px;
+      margin-bottom: 28px;
+    }
+    .sim-banner-icon { font-size: 1.4rem; flex-shrink: 0; line-height: 1; padding-top: 2px; }
+    .sim-banner-title {
+      font-size: 0.95rem; font-weight: 800; color: var(--yellow);
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;
+    }
+    .sim-banner-body { font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; }
+
+    /* ── Page Header ── */
+    .page-header {
+      padding: 64px 0 40px; text-align: center;
+      background: radial-gradient(ellipse 70% 40% at 50% 0%, rgba(139, 92, 246, 0.12), transparent);
+    }
+    .page-breadcrumb { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 24px; }
+    .page-breadcrumb a { color: var(--accent); text-decoration: none; font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: gap var(--transition); }
+    .page-breadcrumb a:hover { gap: 10px; }
+    .page-breadcrumb .sep { color: var(--text-dim); font-size: 0.85rem; }
+    .page-title { font-size: clamp(2rem,5vw,3.2rem); font-weight: 800; line-height: 1.1; margin-bottom: 16px; }
+    .page-title .accent { color: var(--accent); }
+    .page-subtitle { color: var(--text-muted); font-size: 1.05rem; max-width: 580px; margin: 0 auto; }
+
+    main { flex: 1; padding: 0 0 80px; }
+    .tool-wrap { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px;
+      backdrop-filter: blur(12px); transition: border-color var(--transition);
+      margin-bottom: 24px;
+    }
+    .card:hover { border-color: var(--border-hover); }
+    .card-title {
+      font-size: 0.82rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-dim); margin-bottom: 20px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ── Input ── */
+    .input-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px; }
+    .input-group { display: flex; flex-direction: column; gap: 6px; }
+    .input-group label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); }
+    .input-group.stretch { flex: 1; min-width: 200px; }
+    input[type="text"] {
+      width: 100%; background: rgba(12,10,21,0.7); border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px 16px;
+      font-family: 'Syne Mono', monospace; font-size: 1rem; color: var(--text-primary);
+      outline: none; transition: border-color var(--transition);
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]::placeholder { color: var(--text-dim); }
+    select {
+      background: rgba(12,10,21,0.7); border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px 16px;
+      font-family: 'Syne', sans-serif; font-size: 0.95rem; color: var(--text-primary);
+      outline: none; cursor: pointer; transition: border-color var(--transition);
+      min-width: 200px;
+    }
+    select:focus { border-color: var(--accent); }
+    select option { background: var(--bg-mid); color: var(--text-primary); }
+    .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    /* ── Progress ── */
+    .scan-progress { display: none; margin-bottom: 24px; }
+    .scan-progress.show { display: block; }
+    .progress-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
+    }
+    .progress-label { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); }
+    .progress-pct { font-family: 'Syne Mono', monospace; font-size: 0.9rem; color: var(--accent); }
+    .progress-track {
+      height: 8px; background: rgba(167,139,250,0.12);
+      border-radius: 4px; overflow: hidden; margin-bottom: 16px;
+    }
+    .progress-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent-dark), var(--accent));
+      border-radius: 4px;
+      transition: width 0.15s linear;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+    .scan-stats {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stat-box {
+      background: rgba(12,10,21,0.5); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px; text-align: center;
+    }
+    .stat-val { font-family: 'Syne Mono', monospace; font-size: 1.3rem; font-weight: 700; }
+    .stat-val.total  { color: var(--text-muted); }
+    .stat-val.open   { color: var(--green); }
+    .stat-val.closed { color: var(--red); }
+    .stat-val.filtered { color: var(--yellow); }
+    .stat-label { font-size: 0.75rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+    /* ── Log Output ── */
+    .log-wrap {
+      background: rgba(12,10,21,0.8); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 16px;
+      font-family: 'Syne Mono', monospace; font-size: 0.82rem;
+      height: 200px; overflow-y: auto; line-height: 1.7;
+    }
+    .log-line { color: var(--text-dim); }
+    .log-line.open   { color: var(--green); }
+    .log-line.closed { color: var(--text-dim); }
+    .log-line.filtered { color: var(--yellow); }
+    .log-line.info   { color: var(--accent); }
+    .log-line.warn   { color: var(--yellow); }
+
+    /* ── Results ── */
+    .results-section { display: none; }
+    .results-section.show { display: block; }
+    .results-header {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px; margin-bottom: 16px;
+    }
+    .results-target {
+      font-family: 'Syne Mono', monospace; font-size: 0.95rem; color: var(--accent);
+    }
+    .filter-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .filter-btn {
+      padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; border: 1.5px solid var(--border);
+      font-family: 'Syne', sans-serif; transition: all var(--transition);
+      background: transparent; color: var(--text-muted);
+    }
+    .filter-btn:hover { border-color: var(--border-hover); }
+    .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+    .filter-btn.f-open.active   { border-color: var(--green);  color: var(--green);  background: var(--green-bg); }
+    .filter-btn.f-closed.active { border-color: var(--red);    color: var(--red);    background: var(--red-bg); }
+    .filter-btn.f-filtered.active { border-color: var(--yellow); color: var(--yellow); background: var(--yellow-bg); }
+
+    /* ── Ports Table ── */
+    .table-wrap { overflow-x: auto; }
+    table.ports-table {
+      width: 100%; border-collapse: collapse; font-size: 0.88rem;
+    }
+    table.ports-table th {
+      text-align: left; padding: 11px 14px;
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    table.ports-table td {
+      padding: 11px 14px; border-bottom: 1px solid rgba(167,139,250,0.07);
+      color: var(--text-muted); vertical-align: middle;
+    }
+    table.ports-table tr:last-child td { border-bottom: none; }
+    table.ports-table tr:hover td { background: rgba(167,139,250,0.04); }
+    table.ports-table .port-num {
+      font-family: 'Syne Mono', monospace; font-weight: 700; color: var(--text-primary);
+    }
+    table.ports-table .svc-name { font-weight: 600; color: var(--text-primary); }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 10px; border-radius: 6px;
+      font-size: 0.8rem; font-weight: 700; font-family: 'Syne Mono', monospace;
+      white-space: nowrap;
+    }
+    .status-badge::before { content:''; width:6px;height:6px;border-radius:50%;flex-shrink:0; }
+    .status-badge.open     { background: var(--green-bg); color: var(--green); }
+    .status-badge.open::before  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-badge.closed   { background: rgba(94,83,130,0.18); color: var(--text-dim); }
+    .status-badge.closed::before { background: var(--text-dim); }
+    .status-badge.filtered { background: var(--yellow-bg); color: var(--yellow); }
+    .status-badge.filtered::before { background: var(--yellow); }
+    .notes-cell { font-size: 0.8rem; color: var(--text-dim); max-width: 200px; }
+    .notes-cell.warn { color: var(--yellow); }
+    .notes-cell.danger { color: var(--red); }
+
+    /* ── Sim Footer Note ── */
+    .sim-footer-note {
+      background: rgba(251,191,36,0.08); border: 1.5px solid rgba(251,191,36,0.25);
+      border-radius: var(--radius-sm); padding: 16px 20px;
+      font-size: 0.85rem; color: var(--text-muted); text-align: center;
+      margin-bottom: 24px;
+    }
+    .sim-footer-note strong { color: var(--yellow); }
+
+    /* ── Footer ── */
+    #footer {
+      background: var(--bg-mid); border-top: 1px solid var(--border);
+      padding: 56px 0 0; margin-top: auto;
+    }
+    .footer-top {
+      display: grid; grid-template-columns: 2fr 1fr 1fr;
+      gap: 48px; padding-bottom: 48px; border-bottom: 1px solid var(--border);
+    }
+    .footer-logo { font-size: 1.4rem; font-weight: 800; margin-bottom: 10px; }
+    .footer-logo span { color: var(--accent); }
+    .footer-tagline { color: var(--text-dim); font-size: 0.9rem; line-height: 1.6; }
+    .footer-col-title {
+      font-size: 0.82rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-dim); margin-bottom: 16px;
+    }
+    .footer-links { display: flex; flex-direction: column; gap: 10px; }
+    .footer-links a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: color var(--transition); }
+    .footer-links a:hover { color: var(--accent); }
+    .footer-bottom {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px 0; flex-wrap: wrap; gap: 12px;
+    }
+    .footer-copy { font-size: 0.85rem; color: var(--text-dim); }
+    .footer-status { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); }
+    .footer-status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.5} }
+    @media (max-width: 768px) {
+      .footer-top { grid-template-columns: 1fr; gap: 32px; }
+      .scan-stats { grid-template-columns: repeat(2, 1fr); }
+      .input-row { flex-direction: column; }
+      select { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav id="navbar">
+  <div class="container nav-inner">
+    <a class="nav-logo" href="index.html">Phil<span>.</span>Ruttley</a>
+    <div class="nav-links">
+      <a href="index.html">Portfolio</a>
+      <a href="index.html#services">What I Do</a>
+      <a href="index.html#skills">Skills</a>
+      <a href="tools.html">IT Tools</a>
+      <a href="index.html#contact">Contact</a>
+    </div>
+    <a class="btn btn-primary nav-cta" href="index.html#contact">Hire Me</a>
+    <button class="nav-hamburger" id="hamburger" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="index.html">Portfolio</a>
+    <a href="tools.html">IT Tools</a>
+    <a href="index.html#contact">Contact</a>
+  </div>
+</nav>
+
+<!-- Page Header -->
+<div class="page-header">
+  <div class="container">
+    <div class="page-breadcrumb">
+      <a href="tools.html">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        All Tools
+      </a>
+      <span class="sep">·</span>
+      <a href="index.html" class="btn btn-outline" style="padding:6px 14px;font-size:0.82rem;">Back to Portfolio</a>
+    </div>
+    <h1 class="page-title">Port Scanner <span class="accent">Simulator</span></h1>
+    <p class="page-subtitle">A browser-based port scanning simulation for portfolio and educational purposes.</p>
+  </div>
+</div>
+
+<main>
+  <div class="tool-wrap">
+
+    <!-- SIMULATION BANNER -->
+    <div class="sim-banner">
+      <div class="sim-banner-icon">⚠️</div>
+      <div>
+        <div class="sim-banner-title">SIMULATION — No Real Scanning</div>
+        <div class="sim-banner-body">
+          This is a <strong style="color:var(--yellow)">portfolio demo only</strong>. No actual network scanning is performed — no packets are sent, no connections are made. All results are <strong style="color:var(--yellow)">randomly generated</strong> in the browser for demonstration purposes. The same target always produces the same results (seeded randomness). This tool is not a substitute for real network scanning utilities.
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Card -->
+    <div class="card">
+      <div class="card-title">Scan Configuration</div>
+      <div class="input-row">
+        <div class="input-group stretch">
+          <label for="targetInput">Target IP / Hostname</label>
+          <input type="text" id="targetInput" placeholder="e.g. 192.168.1.1 or example.com" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="input-group">
+          <label for="profileSelect">Scan Profile</label>
+          <select id="profileSelect">
+            <option value="quick">Quick Scan (top 20 ports)</option>
+            <option value="common" selected>Common Ports (top 100)</option>
+            <option value="full">Full Scan (common services)</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="startBtn">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          Start Scan
+        </button>
+        <button class="btn btn-danger" id="stopBtn" disabled>
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+          </svg>
+          Stop Scan
+        </button>
+      </div>
+    </div>
+
+    <!-- Scan Progress -->
+    <div class="scan-progress" id="scanProgress">
+      <div class="card" style="padding:24px;">
+        <div class="progress-header">
+          <span class="progress-label" id="progressLabel">Initializing scan…</span>
+          <span class="progress-pct" id="progressPct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="scan-stats">
+          <div class="stat-box"><div class="stat-val total" id="statScanned">0</div><div class="stat-label">Scanned</div></div>
+          <div class="stat-box"><div class="stat-val open" id="statOpen">0</div><div class="stat-label">Open</div></div>
+          <div class="stat-box"><div class="stat-val closed" id="statClosed">0</div><div class="stat-label">Closed</div></div>
+          <div class="stat-box"><div class="stat-val filtered" id="statFiltered">0</div><div class="stat-label">Filtered</div></div>
+        </div>
+        <div class="log-wrap" id="logOutput"></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-section" id="resultsSection">
+      <div class="card">
+        <div class="results-header">
+          <div>
+            <div class="card-title" style="margin-bottom:6px;">Scan Results</div>
+            <div style="font-size:0.85rem;color:var(--text-dim);">
+              Target: <span class="results-target" id="resultTarget">—</span>
+              &nbsp;·&nbsp; Profile: <span id="resultProfile" style="color:var(--text-muted)">—</span>
+              &nbsp;·&nbsp; <span style="color:var(--yellow);font-size:0.8rem;font-weight:700;">[SIMULATED]</span>
+            </div>
+          </div>
+          <div class="filter-row">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn f-open" data-filter="open">Open</button>
+            <button class="filter-btn f-closed" data-filter="closed">Closed</button>
+            <button class="filter-btn f-filtered" data-filter="filtered">Filtered</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="ports-table" id="portsTable">
+            <thead>
+              <tr>
+                <th>Port</th>
+                <th>Protocol</th>
+                <th>Service</th>
+                <th>Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="portsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer sim note -->
+      <div class="sim-footer-note">
+        <strong>⚠️ SIMULATION REMINDER</strong> — The results above are entirely fictional and randomly generated in your browser. No network connections were made. This tool is for portfolio demonstration purposes only.
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- Footer -->
+<footer id="footer">
+  <div class="container">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">Phil<span>.</span>Ruttley</div>
+        <div class="footer-tagline">IT Support &amp; Systems Engineer — Microsoft 365, Cybersecurity, Automation.</div>
+      </div>
+      <div>
+        <div class="footer-col-title">Navigation</div>
+        <div class="footer-links">
+          <a href="index.html">Portfolio</a>
+          <a href="tools.html">IT Tools Hub</a>
+          <a href="index.html#contact">Contact</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">More Tools</div>
+        <div class="footer-links">
+          <a href="ip-checker.html">IP Checker</a>
+          <a href="domain-security.html">Domain Security</a>
+          <a href="dns-lookup.html">DNS Lookup</a>
+          <a href="phishing-analyzer.html">Phishing Analyzer</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2026 Phil Ruttley. All rights reserved.</div>
+      <div class="footer-status"><span class="footer-status-dot"></span>All systems operational</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ── Navbar ──
+  document.getElementById('hamburger').addEventListener('click', () => {
+    document.getElementById('navMobile').classList.toggle('open');
+  });
+
+  // ── Port database ──
+  // [port, protocol, service, baseProbOpen (0-1), riskLevel ('safe'|'warn'|'danger'), noteOpen, noteClosed]
+  const PORT_DB = [
+    [20,   'TCP', 'FTP Data',      0.12, 'danger',  'Active FTP data channel — often disabled', 'Port closed'],
+    [21,   'TCP', 'FTP',           0.18, 'danger',  '⚠ FTP transmits credentials in plaintext', 'No FTP service'],
+    [22,   'TCP', 'SSH',           0.65, 'safe',    'Secure remote access', 'SSH not exposed'],
+    [23,   'TCP', 'Telnet',        0.10, 'danger',  '⚠ Telnet is unencrypted — critical risk', 'Good — Telnet disabled'],
+    [25,   'TCP', 'SMTP',          0.30, 'warn',    'Mail transfer agent listening', 'No mail relay'],
+    [53,   'UDP', 'DNS',           0.55, 'warn',    'DNS resolver or authoritative server', 'No DNS service'],
+    [69,   'UDP', 'TFTP',          0.06, 'danger',  '⚠ TFTP has no authentication', 'TFTP not running'],
+    [80,   'TCP', 'HTTP',          0.72, 'warn',    'Web server (unencrypted)', 'No HTTP service'],
+    [110,  'TCP', 'POP3',          0.22, 'warn',    'Mail retrieval service', 'POP3 not available'],
+    [135,  'TCP', 'MSRPC',         0.28, 'warn',    'Microsoft RPC endpoint mapper', 'RPC not exposed'],
+    [139,  'TCP', 'NetBIOS',       0.20, 'danger',  '⚠ NetBIOS — legacy Windows file sharing', 'NetBIOS disabled'],
+    [143,  'TCP', 'IMAP',          0.24, 'warn',    'IMAP mail service', 'IMAP not available'],
+    [389,  'TCP', 'LDAP',          0.15, 'warn',    'Directory service (LDAP)', 'LDAP not exposed'],
+    [443,  'TCP', 'HTTPS',         0.78, 'safe',    'Secure web server (TLS)', 'No HTTPS service'],
+    [445,  'TCP', 'SMB',           0.22, 'danger',  '⚠ SMB — Windows file sharing, high attack surface', 'SMB not exposed'],
+    [636,  'TCP', 'LDAPS',         0.12, 'safe',    'Secure LDAP (TLS)', 'LDAPS not available'],
+    [993,  'TCP', 'IMAPS',         0.18, 'safe',    'Secure IMAP', 'IMAPS not available'],
+    [995,  'TCP', 'POP3S',         0.16, 'safe',    'Secure POP3', 'POP3S not available'],
+    [1433, 'TCP', 'MSSQL',         0.12, 'danger',  '⚠ SQL Server — database directly exposed', 'MSSQL not exposed'],
+    [1521, 'TCP', 'Oracle DB',     0.08, 'danger',  '⚠ Oracle DB — database directly exposed', 'Oracle not exposed'],
+    [3306, 'TCP', 'MySQL',         0.18, 'danger',  '⚠ MySQL exposed — should be localhost only', 'MySQL not exposed'],
+    [3389, 'TCP', 'RDP',           0.14, 'danger',  '⚠ Remote Desktop — common brute-force target', 'RDP not exposed'],
+    [5432, 'TCP', 'PostgreSQL',    0.14, 'danger',  '⚠ PostgreSQL exposed — should be firewalled', 'PostgreSQL not exposed'],
+    [5900, 'TCP', 'VNC',           0.10, 'danger',  '⚠ VNC remote access — often has weak auth', 'VNC not running'],
+    [6379, 'TCP', 'Redis',         0.10, 'danger',  '⚠ Redis with no auth by default — critical', 'Redis not exposed'],
+    [8080, 'TCP', 'HTTP-Alt',      0.38, 'warn',    'Alternate HTTP / dev server', 'No alt HTTP service'],
+    [8443, 'TCP', 'HTTPS-Alt',     0.28, 'safe',    'Alternate HTTPS port', 'No alt HTTPS service'],
+    [8888, 'TCP', 'HTTP-Alt',      0.18, 'warn',    'Dev/proxy server (Jupyter, proxy, etc)', 'Port closed'],
+    [9200, 'TCP', 'Elasticsearch', 0.08, 'danger',  '⚠ Elasticsearch — often unauthenticated by default', 'Elasticsearch not exposed'],
+    [27017,'TCP', 'MongoDB',       0.10, 'danger',  '⚠ MongoDB — frequent misconfiguration target', 'MongoDB not exposed'],
+  ];
+
+  // Profiles define which ports to scan
+  const PROFILES = {
+    quick:  PORT_DB.slice(0, 20).map(p => p[0]),
+    common: PORT_DB.map(p => p[0]),
+    full:   PORT_DB.map(p => p[0]),
+  };
+  const PROFILE_NAMES = { quick: 'Quick Scan (top 20)', common: 'Common Ports', full: 'Full Scan' };
+
+  // ── Seeded PRNG (simple mulberry32) ──
+  function seedHash(str) {
+    let h = 0x9e3779b9;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i) + 0x6d2b79f5 + (h << 6) + (h >> 2);
+      h = Math.imul(h, 2654435761) >>> 0;
+    }
+    return h >>> 0;
+  }
+
+  function makePRNG(seed) {
+    let s = seed >>> 0;
+    return function() {
+      s = Math.imul(s ^ (s >>> 15), s | 1);
+      s ^= s + Math.imul(s ^ (s >>> 7), s | 61);
+      return ((s ^ (s >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function isPrivateIP(str) {
+    const m = str.match(/^(\d+)\.(\d+)/);
+    if (!m) return false;
+    const a = +m[1], b = +m[2];
+    return (a === 10) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 127);
+  }
+
+  // ── Scan state ──
+  let scanTimer = null;
+  let scanAborted = false;
+  let allResults = [];
+  let activeFilter = 'all';
+
+  document.getElementById('startBtn').addEventListener('click', startScan);
+  document.getElementById('stopBtn').addEventListener('click', () => { scanAborted = true; });
+
+  function startScan() {
+    const target = document.getElementById('targetInput').value.trim();
+    if (!target) {
+      document.getElementById('targetInput').focus();
+      document.getElementById('targetInput').style.borderColor = 'var(--red)';
+      setTimeout(() => document.getElementById('targetInput').style.borderColor = '', 1500);
+      return;
+    }
+
+    const profile = document.getElementById('profileSelect').value;
+    const ports = PROFILES[profile] || PROFILES.common;
+
+    // Build deterministic port list for this target
+    const seed = seedHash(target + ':' + profile);
+    const rng = makePRNG(seed);
+    const isPrivate = isPrivateIP(target);
+
+    // Determine status for each port
+    const portResults = PORT_DB.filter(p => ports.includes(p[0])).map(([port, proto, svc, baseProb, risk, noteOpen, noteClosed]) => {
+      let prob = baseProb;
+      // Private IPs: boost common services slightly, reduce risky ones more
+      if (isPrivate) {
+        if ([80, 443, 22].includes(port)) prob = Math.min(prob + 0.15, 0.9);
+        if ([3389, 23, 21].includes(port)) prob = Math.min(prob + 0.08, 0.3);
+      }
+      const r = rng();
+      let status;
+      if (r < prob) {
+        status = 'open';
+      } else if (r < prob + 0.15) {
+        status = 'filtered';
+      } else {
+        status = 'closed';
+      }
+      return { port, proto, svc, status, risk, noteOpen, noteClosed };
+    });
+
+    // Sort by port number
+    portResults.sort((a, b) => a.port - b.port);
+
+    // Reset UI
+    scanAborted = false;
+    allResults = portResults;
+    document.getElementById('resultsSection').classList.remove('show');
+    document.getElementById('scanProgress').classList.add('show');
+    document.getElementById('logOutput').innerHTML = '';
+    document.getElementById('startBtn').disabled = true;
+    document.getElementById('stopBtn').disabled = false;
+    setStats(0, 0, 0, 0);
+    setProgress(0, 'Initializing…');
+
+    const totalPorts = portResults.length;
+    const scanDuration = profile === 'full' ? 5000 : profile === 'common' ? 4000 : 2500;
+    const stepDelay = scanDuration / totalPorts;
+
+    let idx = 0;
+    let openC = 0, closedC = 0, filteredC = 0;
+
+    addLog('info', `[SIM] Starting simulated scan of ${target}`);
+    addLog('info', `[SIM] Profile: ${PROFILE_NAMES[profile]} · ${totalPorts} ports queued`);
+    addLog('warn', `[SIM] NOTE: This is a simulation — no packets are sent`);
+    addLog('info', '─'.repeat(52));
+
+    function step() {
+      if (scanAborted || idx >= totalPorts) {
+        finishScan(target, profile, scanAborted);
+        return;
+      }
+      const res = portResults[idx];
+      idx++;
+
+      // Update stats
+      if (res.status === 'open')     openC++;
+      else if (res.status === 'closed') closedC++;
+      else filteredC++;
+
+      setStats(idx, openC, closedC, filteredC);
+      const pct = Math.round((idx / totalPorts) * 100);
+      setProgress(pct, `Scanning port ${res.port} (${res.svc})…`);
+
+      const statusStr = res.status === 'open' ? 'OPEN' : res.status === 'filtered' ? 'FILTERED' : 'closed';
+      const cls = res.status;
+      if (res.status !== 'closed') {
+        addLog(cls, `${String(res.port).padStart(5)}/${res.proto.toLowerCase().padEnd(3)}  ${statusStr.padEnd(8)}  ${res.svc}`);
+      }
+
+      scanTimer = setTimeout(step, stepDelay + (rng() * stepDelay * 0.5 - stepDelay * 0.25));
+    }
+
+    scanTimer = setTimeout(step, 300);
+  }
+
+  function finishScan(target, profile, aborted) {
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('stopBtn').disabled = true;
+
+    if (aborted) {
+      addLog('warn', '[SIM] Scan stopped by user.');
+      setProgress(document.getElementById('progressFill').style.width.replace('%',''), 'Scan stopped.');
+    } else {
+      setProgress(100, 'Scan complete.');
+      addLog('info', '─'.repeat(52));
+      addLog('info', '[SIM] Scan complete. Rendering results…');
+    }
+
+    // Render results table
+    const open   = allResults.filter(r => r.status === 'open').length;
+    const closed = allResults.filter(r => r.status === 'closed').length;
+    const filt   = allResults.filter(r => r.status === 'filtered').length;
+    addLog('info', `[SIM] Summary: ${open} open · ${closed} closed · ${filt} filtered`);
+
+    document.getElementById('resultTarget').textContent = target;
+    document.getElementById('resultProfile').textContent = PROFILE_NAMES[profile];
+    activeFilter = 'all';
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === 'all'));
+    renderTable(allResults);
+    document.getElementById('resultsSection').classList.add('show');
+    document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderTable(results) {
+    const filtered = activeFilter === 'all' ? results : results.filter(r => r.status === activeFilter);
+    const tbody = document.getElementById('portsBody');
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:24px;">No ports match this filter.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filtered.map(r => {
+      const noteCls = r.status === 'open'
+        ? (r.risk === 'danger' ? 'danger' : r.risk === 'warn' ? 'warn' : '')
+        : '';
+      const noteText = r.status === 'open' ? r.noteOpen : r.noteClosed;
+      return `<tr>
+        <td class="port-num">${r.port}</td>
+        <td>${r.proto}</td>
+        <td class="svc-name">${r.svc}</td>
+        <td><span class="status-badge ${r.status}">${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span></td>
+        <td class="notes-cell ${noteCls}">${noteText}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Filter buttons
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeFilter = btn.dataset.filter;
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.toggle('active', b === btn);
+      });
+      renderTable(allResults);
+    });
+  });
+
+  function addLog(cls, text) {
+    const log = document.getElementById('logOutput');
+    const div = document.createElement('div');
+    div.className = 'log-line ' + cls;
+    div.textContent = text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function setStats(total, open, closed, filtered) {
+    document.getElementById('statScanned').textContent  = total;
+    document.getElementById('statOpen').textContent     = open;
+    document.getElementById('statClosed').textContent   = closed;
+    document.getElementById('statFiltered').textContent = filtered;
+  }
+
+  function setProgress(pct, label) {
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressPct').textContent  = pct + '%';
+    document.getElementById('progressLabel').textContent = label;
+  }
+</script>
+</body>
+</html>
