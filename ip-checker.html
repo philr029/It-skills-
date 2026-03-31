@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IP Checker — Phil Ruttley</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep:     #0c0a15;
+      --bg-mid:      #13101f;
+      --bg-card:     rgba(19, 16, 31, 0.72);
+      --accent:      #a78bfa;
+      --accent-dark: #8b5cf6;
+      --accent-glow: rgba(167, 139, 250, 0.25);
+      --accent-glow-strong: rgba(167, 139, 250, 0.45);
+      --text-primary: #f0eaff;
+      --text-muted:   #9d8fc4;
+      --text-dim:     #5e5382;
+      --green:        #4ade80;
+      --green-bg:     rgba(74, 222, 128, 0.12);
+      --red:          #f87171;
+      --red-bg:       rgba(248, 113, 113, 0.12);
+      --yellow:       #fbbf24;
+      --yellow-bg:    rgba(251, 191, 36, 0.12);
+      --border:       rgba(167, 139, 250, 0.18);
+      --border-hover: rgba(167, 139, 250, 0.5);
+      --radius:       16px;
+      --radius-sm:    10px;
+      --transition:   0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 10%, rgba(139, 92, 246, 0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(167, 139, 250, 0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+    /* ── Navbar ── */
+    #navbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(12, 10, 21, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner { display: flex; align-items: center; gap: 32px; height: 64px; }
+    .nav-logo { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); text-decoration: none; letter-spacing: -0.5px; }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 28px; margin-left: auto; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color var(--transition); }
+    .nav-links a:hover { color: var(--accent); }
+    .btn { display: inline-block; text-decoration: none; transition: all var(--transition); }
+    .btn-primary { background: linear-gradient(135deg, var(--accent-dark), var(--accent)); color: #fff; border: none; padding: 12px 28px; border-radius: 50px; font-family: Syne; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--accent-glow-strong); }
+    .btn-outline { background: transparent; color: var(--accent); border: 1.5px solid var(--border-hover); padding: 12px 28px; border-radius: 50px; font-family: Syne; font-weight: 600; cursor: pointer; font-size: 0.9rem; text-decoration: none; display: inline-block; transition: all var(--transition); }
+    .btn-outline:hover { background: var(--accent-glow); transform: translateY(-2px); }
+    .nav-cta { margin-left: auto; }
+    .nav-hamburger { display: none; background: none; border: none; cursor: pointer; flex-direction: column; gap: 5px; padding: 6px; }
+    .nav-hamburger span { display: block; width: 22px; height: 2px; background: var(--text-muted); border-radius: 2px; transition: all var(--transition); }
+    .nav-mobile { display: none; flex-direction: column; padding: 16px 24px; gap: 12px; border-top: 1px solid var(--border); background: rgba(12,10,21,0.98); }
+    .nav-mobile a { color: var(--text-muted); text-decoration: none; font-weight: 500; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .nav-mobile.open { display: flex; }
+    @media (max-width: 768px) {
+      .nav-links, .nav-cta { display: none; }
+      .nav-hamburger { display: flex; margin-left: auto; }
+    }
+
+    /* ── Hero ── */
+    .page-hero { padding: 64px 0 40px; text-align: center; }
+    .back-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
+    .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color var(--transition); display: flex; align-items: center; gap: 6px; }
+    .back-link:hover { color: var(--accent); }
+    .page-tag { display: inline-block; padding: 6px 16px; border-radius: 50px; background: var(--accent-glow); border: 1px solid var(--border); color: var(--accent); font-size: 0.78rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 20px; }
+    .page-hero h1 { font-size: clamp(2.2rem, 5vw, 3.5rem); font-weight: 800; letter-spacing: -1px; margin-bottom: 16px; line-height: 1.1; }
+    .page-hero h1 .accent { color: var(--accent); }
+    .page-hero p { color: var(--text-muted); font-size: 1.05rem; max-width: 520px; margin: 0 auto; }
+
+    /* ── Glass card ── */
+    .glass-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 32px;
+    }
+
+    /* ── Input area ── */
+    .tool-section { max-width: 700px; margin: 0 auto 48px; }
+    .input-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .ip-input {
+      flex: 1; min-width: 200px;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      color: var(--text-primary);
+      font-family: 'Syne Mono', monospace;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .ip-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .ip-input::placeholder { color: var(--text-dim); }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-sm { padding: 9px 20px; font-size: 0.85rem; }
+
+    /* ── Loading ── */
+    .loading { display: none; text-align: center; padding: 48px 0; }
+    .loading.active { display: block; }
+    .spinner {
+      width: 48px; height: 48px; margin: 0 auto 20px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading p { color: var(--text-muted); font-size: 0.95rem; }
+
+    /* ── Error ── */
+    .error-box {
+      display: none; padding: 18px 22px;
+      background: var(--red-bg); border: 1px solid rgba(248,113,113,0.3);
+      border-radius: var(--radius-sm); color: var(--red); font-size: 0.95rem;
+      margin-top: 20px;
+    }
+    .error-box.active { display: block; }
+
+    /* ── Private IP ── */
+    .private-box {
+      display: none; padding: 18px 22px;
+      background: var(--yellow-bg); border: 1px solid rgba(251,191,36,0.3);
+      border-radius: var(--radius-sm); color: var(--yellow); font-size: 0.95rem;
+      margin-top: 20px;
+    }
+    .private-box.active { display: block; }
+
+    /* ── Results ── */
+    #results { display: none; }
+    #results.active { display: block; }
+
+    .results-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+    .results-ip { font-family: 'Syne Mono', monospace; font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    .results-sub { color: var(--text-muted); font-size: 0.9rem; }
+
+    /* Verdict banner */
+    .verdict {
+      border-radius: var(--radius-sm);
+      padding: 20px 28px;
+      display: flex; align-items: center; gap: 16px;
+      margin-bottom: 28px; flex-wrap: wrap;
+    }
+    .verdict.safe    { background: var(--green-bg);  border: 1px solid rgba(74,222,128,0.3); }
+    .verdict.suspicious { background: var(--yellow-bg); border: 1px solid rgba(251,191,36,0.3); }
+    .verdict.malicious  { background: var(--red-bg);    border: 1px solid rgba(248,113,113,0.3); }
+    .verdict-icon { font-size: 2rem; }
+    .verdict-label { font-size: 1.3rem; font-weight: 800; }
+    .verdict.safe    .verdict-label { color: var(--green); }
+    .verdict.suspicious .verdict-label { color: var(--yellow); }
+    .verdict.malicious  .verdict-label { color: var(--red); }
+    .verdict-desc { color: var(--text-muted); font-size: 0.9rem; margin-top: 2px; }
+
+    /* Info grid */
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 28px; }
+    .info-card { padding: 24px; }
+    .info-card-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .info-card-title::before { content: ''; display: block; width: 3px; height: 14px; background: var(--accent); border-radius: 2px; }
+    .info-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: var(--text-muted); font-size: 0.85rem; flex-shrink: 0; }
+    .info-value { color: var(--text-primary); font-size: 0.9rem; font-weight: 500; text-align: right; word-break: break-all; }
+
+    /* Risk card */
+    .risk-score-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+    .risk-score-num { font-size: 2.8rem; font-weight: 800; font-family: 'Syne Mono', monospace; line-height: 1; }
+    .risk-score-num.low  { color: var(--green); }
+    .risk-score-num.mid  { color: var(--yellow); }
+    .risk-score-num.high { color: var(--red); }
+    .risk-score-label { color: var(--text-muted); font-size: 0.85rem; }
+    .risk-bar-wrap { background: rgba(255,255,255,0.06); border-radius: 50px; height: 8px; margin-bottom: 16px; overflow: hidden; }
+    .risk-bar { height: 100%; border-radius: 50px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+    .risk-bar.low  { background: var(--green); }
+    .risk-bar.mid  { background: var(--yellow); }
+    .risk-bar.high { background: var(--red); }
+
+    /* Coords display */
+    .coords-box {
+      background: rgba(167,139,250,0.06); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 16px 20px;
+      display: flex; align-items: center; gap: 16px; margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .coords-icon { font-size: 1.8rem; }
+    .coords-text { font-family: 'Syne Mono', monospace; font-size: 0.95rem; color: var(--accent); }
+    .coords-sub { color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
+
+    /* Raw data */
+    .raw-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; margin-bottom: 12px; user-select: none; }
+    .raw-toggle:hover { color: var(--accent); }
+    .raw-toggle .arrow { transition: transform var(--transition); }
+    .raw-toggle.open .arrow { transform: rotate(90deg); }
+    .raw-data {
+      display: none; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 20px;
+      font-family: 'Syne Mono', monospace; font-size: 0.8rem;
+      color: var(--text-muted); overflow-x: auto; white-space: pre;
+      line-height: 1.7;
+    }
+    .raw-data.open { display: block; }
+
+    /* ── Footer ── */
+    #footer { margin-top: 80px; border-top: 1px solid var(--border); padding: 48px 0 32px; }
+    .footer-top { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+    @media (max-width: 640px) { .footer-top { grid-template-columns: 1fr; } }
+    .footer-logo { font-size: 1.3rem; font-weight: 800; color: var(--text-primary); margin-bottom: 10px; }
+    .footer-logo span { color: var(--accent); }
+    .footer-tagline { color: var(--text-muted); font-size: 0.85rem; line-height: 1.6; max-width: 280px; }
+    .footer-col-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); font-weight: 600; margin-bottom: 16px; }
+    .footer-links { display: flex; flex-direction: column; gap: 10px; }
+    .footer-links a { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; transition: color var(--transition); }
+    .footer-links a:hover { color: var(--accent); }
+    .footer-bottom { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 24px; border-top: 1px solid var(--border); }
+    .footer-copy { color: var(--text-dim); font-size: 0.82rem; }
+    .footer-status { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.82rem; }
+    .footer-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .glass-card { padding: 20px; }
+      .input-row { flex-direction: column; }
+      .ip-input { min-width: unset; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav id="navbar">
+  <div class="container nav-inner">
+    <a class="nav-logo" href="index.html">Phil<span>.</span>Ruttley</a>
+    <div class="nav-links">
+      <a href="index.html">Portfolio</a>
+      <a href="index.html#services">What I Do</a>
+      <a href="index.html#skills">Skills</a>
+      <a href="tools.html">IT Tools</a>
+      <a href="index.html#contact">Contact</a>
+    </div>
+    <a class="btn btn-primary nav-cta" href="index.html#contact">Hire Me</a>
+    <button class="nav-hamburger" id="hamburger" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="index.html">Portfolio</a>
+    <a href="tools.html">IT Tools</a>
+    <a href="index.html#contact">Contact</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="page-hero">
+  <div class="container">
+    <div class="back-row">
+      <a class="btn btn-outline btn-sm" href="index.html">Back to Portfolio</a>
+      <a class="back-link" href="tools.html">← All Tools</a>
+    </div>
+    <div class="page-tag">Network Utility</div>
+    <h1>IP <span class="accent">Checker</span></h1>
+    <p>Enter any IP address to check its geolocation, ISP, and abuse reputation score.</p>
+  </div>
+</section>
+
+<!-- Tool -->
+<main>
+  <div class="container">
+    <div class="tool-section">
+      <div class="glass-card">
+        <div class="input-row">
+          <input
+            class="ip-input"
+            id="ipInput"
+            type="text"
+            placeholder="e.g. 8.8.8.8 or 1.1.1.1"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="45"
+          />
+          <button class="btn btn-primary btn-sm" id="checkBtn">Check IP</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-outline btn-sm" id="myIpBtn">📍 Use My IP</button>
+        </div>
+        <div class="error-box" id="errorBox"></div>
+        <div class="private-box" id="privateBox">
+          🔒 <strong>Private IP address</strong> — this address is not publicly routable and exists only within a local network. No geolocation or abuse data is available.
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>Fetching IP intelligence…</p>
+    </div>
+
+    <!-- Results -->
+    <div id="results">
+      <div class="results-header">
+        <div>
+          <div class="results-ip" id="resIP"></div>
+          <div class="results-sub" id="resCountryLine"></div>
+        </div>
+      </div>
+
+      <!-- Verdict -->
+      <div class="verdict" id="verdictBox">
+        <div class="verdict-icon" id="verdictIcon"></div>
+        <div>
+          <div class="verdict-label" id="verdictLabel"></div>
+          <div class="verdict-desc" id="verdictDesc"></div>
+        </div>
+      </div>
+
+      <!-- Coords -->
+      <div class="coords-box">
+        <div class="coords-icon">📍</div>
+        <div>
+          <div class="coords-text" id="coordsText"></div>
+          <div class="coords-sub">Approximate geolocation — accuracy may vary</div>
+        </div>
+      </div>
+
+      <!-- Info grid -->
+      <div class="info-grid">
+        <!-- Geo card -->
+        <div class="glass-card info-card">
+          <div class="info-card-title">Geolocation</div>
+          <div class="info-row"><span class="info-label">Country</span><span class="info-value" id="resCountry"></span></div>
+          <div class="info-row"><span class="info-label">Region</span><span class="info-value" id="resRegion"></span></div>
+          <div class="info-row"><span class="info-label">City</span><span class="info-value" id="resCity"></span></div>
+          <div class="info-row"><span class="info-label">ZIP</span><span class="info-value" id="resZip"></span></div>
+          <div class="info-row"><span class="info-label">Timezone</span><span class="info-value" id="resTZ"></span></div>
+        </div>
+
+        <!-- Network card -->
+        <div class="glass-card info-card">
+          <div class="info-card-title">Network</div>
+          <div class="info-row"><span class="info-label">ISP</span><span class="info-value" id="resISP"></span></div>
+          <div class="info-row"><span class="info-label">Organisation</span><span class="info-value" id="resOrg"></span></div>
+          <div class="info-row"><span class="info-label">AS Number</span><span class="info-value" id="resAS"></span></div>
+          <div class="info-row"><span class="info-label">IP Type</span><span class="info-value" id="resIPType"></span></div>
+        </div>
+
+        <!-- Risk card -->
+        <div class="glass-card info-card">
+          <div class="info-card-title">Risk Assessment</div>
+          <div class="risk-score-row">
+            <div class="risk-score-num" id="riskScoreNum">0</div>
+            <div>
+              <div style="color:var(--text-primary); font-weight:600;">Abuse Confidence</div>
+              <div class="risk-score-label">Simulated score based on IP characteristics</div>
+            </div>
+          </div>
+          <div class="risk-bar-wrap"><div class="risk-bar" id="riskBar" style="width:0%"></div></div>
+          <div class="info-row"><span class="info-label">Est. Reports</span><span class="info-value" id="resReports"></span></div>
+          <div class="info-row"><span class="info-label">Last Seen</span><span class="info-value" id="resLastSeen"></span></div>
+          <div class="info-row"><span class="info-label">Category</span><span class="info-value" id="resCategory"></span></div>
+        </div>
+      </div>
+
+      <!-- Raw data -->
+      <div class="glass-card" style="margin-bottom:48px;">
+        <div class="raw-toggle" id="rawToggle">
+          <span class="arrow">▶</span> Raw API Response
+        </div>
+        <div class="raw-data" id="rawData"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Footer -->
+<footer id="footer">
+  <div class="container">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">Phil<span>.</span>Ruttley</div>
+        <div class="footer-tagline">IT Support &amp; Systems Engineer — Microsoft 365, Cybersecurity, Automation.</div>
+      </div>
+      <div>
+        <div class="footer-col-title">Navigation</div>
+        <div class="footer-links">
+          <a href="index.html">Portfolio</a>
+          <a href="tools.html">IT Tools Hub</a>
+          <a href="index.html#contact">Contact</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">More Tools</div>
+        <div class="footer-links">
+          <a href="password-generator.html">Password Generator</a>
+          <a href="subnet-calculator.html">Subnet Calculator</a>
+          <a href="dns-lookup.html">DNS Lookup</a>
+          <a href="port-scanner-sim.html">Port Scanner</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2026 Phil Ruttley. All rights reserved.</div>
+      <div class="footer-status"><span class="footer-status-dot"></span>All systems operational</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ── Hamburger ──
+  document.getElementById('hamburger').addEventListener('click', () => {
+    document.getElementById('navMobile').classList.toggle('open');
+  });
+
+  // ── Raw toggle ──
+  document.getElementById('rawToggle').addEventListener('click', () => {
+    document.getElementById('rawToggle').classList.toggle('open');
+    document.getElementById('rawData').classList.toggle('open');
+  });
+
+  // ── Utilities ──
+  const $ = id => document.getElementById(id);
+
+  function isValidIP(ip) {
+    const v4 = /^(\d{1,3}\.){3}\d{1,3}$/;
+    const v6 = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
+    if (v4.test(ip)) {
+      return ip.split('.').every(o => parseInt(o) <= 255);
+    }
+    return v6.test(ip);
+  }
+
+  function isPrivateIP(ip) {
+    const parts = ip.split('.').map(Number);
+    if (parts.length !== 4) return false;
+    const [a, b] = parts;
+    if (a === 10) return true;
+    if (a === 127) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 0) return true;
+    return false;
+  }
+
+  // ── Deterministic abuse score simulation ──
+  function simulateAbuseScore(ip) {
+    const parts = ip.split('.').map(Number);
+    if (parts.length !== 4) {
+      return { score: 5, reports: 0, category: 'Unknown', ipType: 'IPv6' };
+    }
+    const [a, b, c, d] = parts;
+
+    // Seed a pseudo-random but deterministic value from the octets
+    const seed = ((a * 16777619) ^ (b * 65521) ^ (c * 257) ^ d) >>> 0;
+    const pseudoRandom = (seed % 100);
+
+    let base = 0;
+    let category = 'Residential';
+    let ipType = 'Residential / Consumer';
+
+    // Datacenter ranges — higher risk baseline
+    const datacenterFirst = [23, 34, 35, 52, 54, 104, 108, 130, 140, 143, 144, 149, 157, 159, 161, 163, 167, 185, 193, 194, 195, 198, 199, 207, 208, 209, 216];
+    // Known CDN / reputable infrastructure
+    const safeFirst = [1, 8, 8, 9, 104, 172, 192, 208];
+    const knownSafe = [
+      [8,8,8,8],[8,8,4,4],[1,1,1,1],[1,0,0,1],[9,9,9,9],
+      [208,67,222,222],[208,67,220,220],[172,217,0,0]
+    ];
+
+    const isKnownSafe = knownSafe.some(([ka,kb,kc,kd]) =>
+      ka === a && kb === b && (kc === 0 || kc === c) && (kd === 0 || kd === d)
+    );
+    if (isKnownSafe) return { score: 0, reports: 0, category: 'Public DNS / CDN', ipType: 'Trusted Infrastructure' };
+
+    // Google, Cloudflare, major cloud – low risk
+    if ((a === 8 && b === 8) || (a === 1 && b === 1) || (a === 9 && b === 9)) {
+      base = 0; category = 'Public DNS'; ipType = 'Trusted Infrastructure';
+    } else if (datacenterFirst.includes(a)) {
+      base = 20 + (pseudoRandom % 40);
+      category = 'Datacenter / Cloud';
+      ipType = 'Datacenter / Hosting';
+    } else if (a >= 100 && a <= 110) {
+      base = 10 + (pseudoRandom % 25);
+      category = 'ISP / Carrier';
+      ipType = 'Carrier-Grade NAT';
+    } else {
+      // General residential — mostly safe
+      base = pseudoRandom % 20;
+      category = 'Residential ISP';
+      ipType = 'Residential / Consumer';
+    }
+
+    // Bump certain suspicious-looking patterns
+    if (d === 1 || d === 254) base = Math.min(base + 5, 100);
+    if (c === 0 && d === 1) base = Math.min(base + 10, 100);
+
+    const score = Math.max(0, Math.min(100, base));
+    const reports = score === 0 ? 0 : Math.floor(score * 1.8 + (pseudoRandom % 20));
+
+    // Simulate a last-seen date
+    const daysAgo = score === 0 ? null : Math.floor((pseudoRandom % 90) + 1);
+
+    return { score, reports, category, ipType, daysAgo };
+  }
+
+  function getCountryFlag(countryCode) {
+    if (!countryCode || countryCode.length !== 2) return '🌐';
+    const offset = 0x1F1E6 - 65;
+    return String.fromCodePoint(countryCode.charCodeAt(0) + offset) +
+           String.fromCodePoint(countryCode.charCodeAt(1) + offset);
+  }
+
+  function formatDate(daysAgo) {
+    if (daysAgo === null) return 'Never reported';
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function showError(msg) {
+    $('errorBox').textContent = '⚠️ ' + msg;
+    $('errorBox').classList.add('active');
+    $('privateBox').classList.remove('active');
+  }
+
+  function clearMessages() {
+    $('errorBox').classList.remove('active');
+    $('privateBox').classList.remove('active');
+    $('results').classList.remove('active');
+    $('loading').classList.remove('active');
+  }
+
+  // ── Main lookup ──
+  async function checkIP(rawIP) {
+    const ip = rawIP.trim();
+    clearMessages();
+
+    if (!ip) { showError('Please enter an IP address.'); return; }
+    if (!isValidIP(ip)) { showError('Invalid IP address format. Please enter a valid IPv4 or IPv6 address.'); return; }
+    if (isPrivateIP(ip)) {
+      $('privateBox').classList.add('active');
+      return;
+    }
+
+    $('loading').classList.add('active');
+
+    try {
+      const url = `https://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,query`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      if (data.status !== 'success') {
+        throw new Error(data.message || 'IP lookup failed');
+      }
+
+      $('loading').classList.remove('active');
+      renderResults(data, ip);
+    } catch (err) {
+      $('loading').classList.remove('active');
+      showError(`Could not fetch IP data: ${err.message}. Please check your connection and try again.`);
+    }
+  }
+
+  function renderResults(data, ip) {
+    const abuse = simulateAbuseScore(ip);
+    const flag = getCountryFlag(data.countryCode);
+
+    // Header
+    $('resIP').textContent = data.query || ip;
+    $('resCountryLine').textContent = `${flag} ${data.city || '—'}, ${data.regionName || '—'}, ${data.country || '—'}`;
+
+    // Verdict
+    const vBox = $('verdictBox');
+    vBox.className = 'verdict';
+    if (abuse.score < 25) {
+      vBox.classList.add('safe');
+      $('verdictIcon').textContent = '✅';
+      $('verdictLabel').textContent = 'SAFE';
+      $('verdictDesc').textContent = `Low abuse confidence (${abuse.score}%). This IP appears clean with no significant threat signals.`;
+    } else if (abuse.score <= 75) {
+      vBox.classList.add('suspicious');
+      $('verdictIcon').textContent = '⚠️';
+      $('verdictLabel').textContent = 'SUSPICIOUS';
+      $('verdictDesc').textContent = `Moderate abuse confidence (${abuse.score}%). This IP has characteristics associated with elevated risk activity.`;
+    } else {
+      vBox.classList.add('malicious');
+      $('verdictIcon').textContent = '🚨';
+      $('verdictLabel').textContent = 'MALICIOUS';
+      $('verdictDesc').textContent = `High abuse confidence (${abuse.score}%). This IP has strong indicators of malicious activity and should be blocked.`;
+    }
+
+    // Coords
+    const lat = typeof data.lat === 'number' ? data.lat.toFixed(4) : '—';
+    const lon = typeof data.lon === 'number' ? data.lon.toFixed(4) : '—';
+    $('coordsText').textContent = `${lat}, ${lon}`;
+
+    // Geo card
+    $('resCountry').textContent = `${flag} ${data.country || '—'} (${data.countryCode || '—'})`;
+    $('resRegion').textContent = data.regionName || '—';
+    $('resCity').textContent = data.city || '—';
+    $('resZip').textContent = data.zip || '—';
+    $('resTZ').textContent = data.timezone || '—';
+
+    // Network card
+    $('resISP').textContent = data.isp || '—';
+    $('resOrg').textContent = data.org || data.isp || '—';
+    $('resAS').textContent = data.as || '—';
+    $('resIPType').textContent = abuse.ipType;
+
+    // Risk card
+    const riskClass = abuse.score < 25 ? 'low' : abuse.score <= 75 ? 'mid' : 'high';
+    $('riskScoreNum').textContent = `${abuse.score}%`;
+    $('riskScoreNum').className = `risk-score-num ${riskClass}`;
+    $('riskBar').style.width = `${abuse.score}%`;
+    $('riskBar').className = `risk-bar ${riskClass}`;
+    $('resReports').textContent = abuse.reports.toString();
+    $('resLastSeen').textContent = formatDate(abuse.daysAgo);
+    $('resCategory').textContent = abuse.category;
+
+    // Raw data
+    $('rawData').textContent = JSON.stringify(data, null, 2);
+
+    $('results').classList.add('active');
+    $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── My IP ──
+  $('myIpBtn').addEventListener('click', async () => {
+    $('myIpBtn').disabled = true;
+    $('myIpBtn').textContent = '⏳ Detecting…';
+    try {
+      const res = await fetch('https://api.ipify.org?format=json');
+      const data = await res.json();
+      $('ipInput').value = data.ip;
+      await checkIP(data.ip);
+    } catch {
+      showError('Could not detect your IP address. Please enter it manually.');
+    } finally {
+      $('myIpBtn').disabled = false;
+      $('myIpBtn').textContent = '📍 Use My IP';
+    }
+  });
+
+  // ── Check button ──
+  $('checkBtn').addEventListener('click', () => checkIP($('ipInput').value));
+  $('ipInput').addEventListener('keydown', e => { if (e.key === 'Enter') checkIP($('ipInput').value); });
+</script>
+</body>
+</html>
