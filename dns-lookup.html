@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DNS Lookup — Phil Ruttley IT Tools</title>
+  <meta name="description" content="Query live DNS records for any domain using Google's public DNS-over-HTTPS API." />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep:      #0c0a15;
+      --bg-mid:       #13101f;
+      --bg-card:      rgba(19, 16, 31, 0.72);
+      --accent:       #a78bfa;
+      --accent-dark:  #8b5cf6;
+      --accent-glow:  rgba(167, 139, 250, 0.25);
+      --text-primary: #f0eaff;
+      --text-muted:   #9d8fc4;
+      --text-dim:     #5e5382;
+      --green:        #4ade80;
+      --green-bg:     rgba(74, 222, 128, 0.12);
+      --red:          #f87171;
+      --red-bg:       rgba(248, 113, 113, 0.12);
+      --yellow:       #fbbf24;
+      --yellow-bg:    rgba(251, 191, 36, 0.12);
+      --border:       rgba(167, 139, 250, 0.18);
+      --border-hover: rgba(167, 139, 250, 0.5);
+      --radius:       16px;
+      --radius-sm:    10px;
+      --transition:   0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-deep);
+      font-family: 'Syne', sans-serif;
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Navbar ── */
+    #navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(12, 10, 21, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      transition: box-shadow var(--transition);
+    }
+    #navbar.scrolled { box-shadow: 0 4px 32px rgba(0,0,0,0.4); }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      height: 68px;
+    }
+
+    .nav-logo {
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--text-primary);
+      text-decoration: none;
+      letter-spacing: -0.5px;
+      flex-shrink: 0;
+    }
+    .nav-logo span { color: var(--accent); }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      margin-left: auto;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color var(--transition);
+    }
+    .nav-links a:hover { color: var(--accent); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+      color: #fff;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 50px;
+      font-size: 0.9rem;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px var(--accent-glow);
+    }
+    .btn-outline {
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      background: transparent;
+      padding: 8px 20px;
+      border-radius: 50px;
+      font-size: 0.85rem;
+    }
+    .btn-outline:hover {
+      border-color: var(--border-hover);
+      color: var(--accent);
+    }
+
+    .nav-cta { margin-left: 8px; }
+
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      margin-left: auto;
+    }
+    .nav-hamburger span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: var(--text-muted);
+      border-radius: 2px;
+      transition: all var(--transition);
+    }
+    .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+    .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .nav-mobile {
+      display: none;
+      flex-direction: column;
+      padding: 16px 24px 20px;
+      gap: 4px;
+      border-top: 1px solid var(--border);
+    }
+    .nav-mobile.open { display: flex; }
+    .nav-mobile a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      padding: 8px 0;
+      transition: color var(--transition);
+    }
+    .nav-mobile a:hover { color: var(--accent); }
+
+    /* ── Page Layout ── */
+    main { flex: 1; padding: 48px 0 72px; }
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 36px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .breadcrumb-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color var(--transition);
+    }
+    .breadcrumb-back:hover { color: var(--accent); }
+    .breadcrumb-back svg { transition: transform var(--transition); }
+    .breadcrumb-back:hover svg { transform: translateX(-3px); }
+
+    .page-header { margin-bottom: 40px; }
+    .page-title {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin-bottom: 12px;
+    }
+    .page-title .accent { color: var(--accent); }
+    .page-subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 520px;
+      line-height: 1.6;
+    }
+
+    /* ── Glass Card ── */
+    .glass-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 28px;
+    }
+
+    /* ── Input Area ── */
+    .input-card { margin-bottom: 28px; }
+
+    .input-group {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .input-wrap { flex: 1; position: relative; }
+    .input-wrap svg {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    input[type="text"] {
+      background: rgba(167, 139, 250, 0.06);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-radius: var(--radius-sm);
+      padding: 13px 16px 13px 42px;
+      width: 100%;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    input[type="text"]::placeholder { color: var(--text-dim); }
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      outline: none;
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .chips-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .chips-label {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .chip {
+      background: rgba(167, 139, 250, 0.08);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 50px;
+      padding: 4px 14px;
+      font-size: 0.82rem;
+      font-family: 'Syne Mono', monospace;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    .btn-lookup {
+      width: 100%;
+      padding: 13px 24px;
+      font-size: 1rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 20px;
+      gap: 8px;
+    }
+    .btn-lookup:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      background: rgba(167, 139, 250, 0.06);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 50px;
+      padding: 5px 16px;
+      font-size: 0.8rem;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .filter-btn:hover {
+      border-color: var(--border-hover);
+      color: var(--text-primary);
+    }
+    .filter-btn.active {
+      background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+      border-color: transparent;
+      color: #fff;
+    }
+
+    /* ── Error Banner ── */
+    .error-banner {
+      display: none;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--red-bg);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin-bottom: 24px;
+      color: var(--red);
+      font-size: 0.9rem;
+    }
+    .error-banner.visible { display: flex; }
+    .error-banner svg { flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Summary Card ── */
+    .summary-card {
+      display: none;
+      align-items: center;
+      gap: 16px;
+      background: var(--green-bg);
+      border: 1px solid rgba(74, 222, 128, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 14px 20px;
+      margin-bottom: 28px;
+    }
+    .summary-card.visible { display: flex; }
+    .summary-icon {
+      width: 36px;
+      height: 36px;
+      background: rgba(74, 222, 128, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--green);
+      flex-shrink: 0;
+    }
+    .summary-text { font-size: 0.9rem; color: var(--text-muted); }
+    .summary-text strong { color: var(--green); font-weight: 700; }
+
+    /* ── Spinner ── */
+    .spinner-wrap {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 48px 0;
+    }
+    .spinner-wrap.visible { display: flex; }
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner-text { color: var(--text-muted); font-size: 0.9rem; }
+
+    .loading-types {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .loading-type-chip {
+      background: rgba(167, 139, 250, 0.08);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: 50px;
+      padding: 3px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .loading-type-chip.done {
+      border-color: rgba(74, 222, 128, 0.4);
+      color: var(--green);
+      background: var(--green-bg);
+    }
+    .loading-type-chip.fetching {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    /* ── Results ── */
+    #results { display: none; }
+    #results.visible { display: block; }
+
+    .record-section {
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color var(--transition);
+    }
+    .record-section:hover { border-color: var(--border-hover); }
+    .record-section.hidden { display: none; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: rgba(167, 139, 250, 0.04);
+      border-bottom: 1px solid var(--border);
+    }
+    .section-header-left { display: flex; align-items: center; gap: 12px; }
+
+    .type-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 3px 10px;
+      border-radius: 50px;
+      font-family: 'Syne Mono', monospace;
+      text-transform: uppercase;
+    }
+    .badge-A    { background: rgba(59, 130, 246, 0.18); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+    .badge-AAAA { background: rgba(139, 92, 246, 0.18); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.3); }
+    .badge-MX   { background: rgba(251, 146, 60, 0.18); color: #fb923c; border: 1px solid rgba(251,146,60,0.3); }
+    .badge-NS   { background: rgba(34, 211, 238, 0.18); color: #22d3ee; border: 1px solid rgba(34,211,238,0.3); }
+    .badge-TXT  { background: rgba(74, 222, 128, 0.18); color: #4ade80; border: 1px solid rgba(74,222,128,0.3); }
+    .badge-CNAME{ background: rgba(244, 114, 182, 0.18); color: #f472b6; border: 1px solid rgba(244,114,182,0.3); }
+
+    .section-title {
+      font-weight: 600;
+      font-size: 0.92rem;
+      color: var(--text-primary);
+    }
+    .section-count {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      background: rgba(167, 139, 250, 0.08);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 2px 10px;
+      font-weight: 600;
+    }
+
+    .section-body { padding: 4px 0; }
+
+    .record-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 11px 20px;
+      border-bottom: 1px solid rgba(167, 139, 250, 0.06);
+      transition: background var(--transition);
+    }
+    .record-row:last-child { border-bottom: none; }
+    .record-row:hover { background: rgba(167, 139, 250, 0.04); }
+
+    .ttl-badge {
+      flex-shrink: 0;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      background: rgba(167, 139, 250, 0.06);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-family: 'Syne Mono', monospace;
+      margin-top: 2px;
+    }
+
+    .record-value {
+      font-family: 'Syne Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-primary);
+      background: rgba(167, 139, 250, 0.08);
+      padding: 2px 10px;
+      border-radius: 6px;
+      word-break: break-all;
+      flex: 1;
+      line-height: 1.5;
+    }
+
+    .record-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      flex-wrap: wrap;
+    }
+    .record-priority {
+      font-size: 0.72rem;
+      color: var(--yellow);
+      background: var(--yellow-bg);
+      border: 1px solid rgba(251,191,36,0.25);
+      border-radius: 50px;
+      padding: 1px 8px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .empty-row {
+      padding: 18px 20px;
+      color: var(--text-dim);
+      font-size: 0.87rem;
+      font-style: italic;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Footer ── */
+    #footer {
+      background: var(--bg-mid);
+      border-top: 1px solid var(--border);
+      padding: 48px 0 24px;
+    }
+    .footer-top {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 36px;
+    }
+    .footer-logo {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+    }
+    .footer-logo span { color: var(--accent); }
+    .footer-tagline {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      line-height: 1.6;
+      max-width: 280px;
+    }
+    .footer-col-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+    }
+    .footer-links { display: flex; flex-direction: column; gap: 8px; }
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      transition: color var(--transition);
+    }
+    .footer-links a:hover { color: var(--accent); }
+    .footer-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-copy { color: var(--text-dim); font-size: 0.82rem; }
+    .footer-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--green);
+      font-size: 0.82rem;
+    }
+    .footer-status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.5); }
+      50%       { box-shadow: 0 0 0 5px rgba(74, 222, 128, 0); }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .nav-links, .nav-cta { display: none; }
+      .nav-hamburger { display: flex; }
+      .footer-top { grid-template-columns: 1fr; gap: 28px; }
+      .input-group { flex-direction: column; }
+      .breadcrumb { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<nav id="navbar">
+  <div class="container nav-inner">
+    <a class="nav-logo" href="index.html">Phil<span>.</span>Ruttley</a>
+    <div class="nav-links">
+      <a href="index.html">Portfolio</a>
+      <a href="index.html#services">What I Do</a>
+      <a href="index.html#skills">Skills</a>
+      <a href="tools.html">IT Tools</a>
+      <a href="index.html#contact">Contact</a>
+    </div>
+    <a class="btn btn-primary nav-cta" href="index.html#contact">Hire Me</a>
+    <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="index.html">Portfolio</a>
+    <a href="tools.html">IT Tools</a>
+    <a href="index.html#contact">Contact</a>
+  </div>
+</nav>
+
+<!-- ── Main ── -->
+<main>
+  <div class="container">
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a class="breadcrumb-back" href="tools.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        All Tools
+      </a>
+      <a class="btn btn-outline" href="index.html">Back to Portfolio</a>
+    </div>
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1 class="page-title">DNS <span class="accent">Lookup</span></h1>
+      <p class="page-subtitle">Query live DNS records for any domain using Google's public DNS-over-HTTPS API.</p>
+    </div>
+
+    <!-- Input Card -->
+    <div class="glass-card input-card">
+      <div class="input-group">
+        <div class="input-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="domainInput" placeholder="e.g. google.com" autocomplete="off" spellcheck="false" />
+        </div>
+      </div>
+
+      <div class="chips-row">
+        <span class="chips-label">Quick examples:</span>
+        <button class="chip" data-domain="google.com">google.com</button>
+        <button class="chip" data-domain="github.com">github.com</button>
+        <button class="chip" data-domain="cloudflare.com">cloudflare.com</button>
+      </div>
+
+      <button class="btn btn-primary btn-lookup" id="lookupBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Lookup All Records
+      </button>
+
+      <div class="filter-row" id="filterRow">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="A">A</button>
+        <button class="filter-btn" data-filter="AAAA">AAAA</button>
+        <button class="filter-btn" data-filter="MX">MX</button>
+        <button class="filter-btn" data-filter="NS">NS</button>
+        <button class="filter-btn" data-filter="TXT">TXT</button>
+        <button class="filter-btn" data-filter="CNAME">CNAME</button>
+      </div>
+    </div>
+
+    <!-- Error Banner -->
+    <div class="error-banner" id="errorBanner">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="errorText"></span>
+    </div>
+
+    <!-- Spinner -->
+    <div class="spinner-wrap" id="spinnerWrap">
+      <div class="spinner"></div>
+      <div class="spinner-text">Querying DNS records…</div>
+      <div class="loading-types" id="loadingTypes"></div>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary-card" id="summaryCard">
+      <div class="summary-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="summary-text" id="summaryText"></div>
+    </div>
+
+    <!-- Results -->
+    <div id="results"></div>
+
+  </div>
+</main>
+
+<!-- ── Footer ── -->
+<footer id="footer">
+  <div class="container">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">Phil<span>.</span>Ruttley</div>
+        <div class="footer-tagline">IT Support &amp; Systems Engineer — Microsoft 365, Cybersecurity, Automation.</div>
+      </div>
+      <div>
+        <div class="footer-col-title">Navigation</div>
+        <div class="footer-links">
+          <a href="index.html">Portfolio</a>
+          <a href="tools.html">IT Tools Hub</a>
+          <a href="index.html#contact">Contact</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">More Tools</div>
+        <div class="footer-links">
+          <a href="ip-checker.html">IP Checker</a>
+          <a href="domain-security.html">Domain Security</a>
+          <a href="password-generator.html">Password Generator</a>
+          <a href="subnet-calculator.html">Subnet Calculator</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2026 Phil Ruttley. All rights reserved.</div>
+      <div class="footer-status"><span class="footer-status-dot"></span>All systems operational</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  /* ── Navbar ── */
+  const navbar    = document.getElementById('navbar');
+  const hamburger = document.getElementById('hamburger');
+  const navMobile = document.getElementById('navMobile');
+
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 50);
+  });
+
+  hamburger.addEventListener('click', () => {
+    hamburger.classList.toggle('open');
+    navMobile.classList.toggle('open');
+  });
+
+  /* ── Quick Chips ── */
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.getElementById('domainInput').value = chip.dataset.domain;
+      document.getElementById('domainInput').focus();
+    });
+  });
+
+  /* ── Filter Buttons ── */
+  let activeFilter = 'all';
+
+  document.getElementById('filterRow').addEventListener('click', e => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    applyFilter();
+  });
+
+  function applyFilter() {
+    document.querySelectorAll('.record-section').forEach(section => {
+      const type = section.dataset.type;
+      section.classList.toggle('hidden', activeFilter !== 'all' && type !== activeFilter);
+    });
+  }
+
+  /* ── Domain Validation ── */
+  function isValidDomain(domain) {
+    if (!domain || domain.length > 253) return false;
+    const trimmed = domain.trim().replace(/\.$/, '');
+    return /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(trimmed);
+  }
+
+  /* ── UI Helpers ── */
+  function showError(msg) {
+    const banner = document.getElementById('errorBanner');
+    document.getElementById('errorText').textContent = msg;
+    banner.classList.add('visible');
+  }
+
+  function hideError() {
+    document.getElementById('errorBanner').classList.remove('visible');
+  }
+
+  function showSpinner(types) {
+    const wrap = document.getElementById('spinnerWrap');
+    const loadingTypes = document.getElementById('loadingTypes');
+    loadingTypes.innerHTML = '';
+    types.forEach(t => {
+      const chip = document.createElement('span');
+      chip.className = 'loading-type-chip fetching';
+      chip.id = 'lt-' + t;
+      chip.textContent = t;
+      loadingTypes.appendChild(chip);
+    });
+    wrap.classList.add('visible');
+  }
+
+  function hideSpinner() {
+    document.getElementById('spinnerWrap').classList.remove('visible');
+  }
+
+  function markTypeLoaded(type) {
+    const chip = document.getElementById('lt-' + type);
+    if (chip) {
+      chip.classList.remove('fetching');
+      chip.classList.add('done');
+    }
+  }
+
+  /* ── DNS Lookup ── */
+  const RECORD_TYPES = ['A', 'AAAA', 'MX', 'NS', 'TXT', 'CNAME'];
+
+  const TYPE_DESCRIPTIONS = {
+    A:     'IPv4 Addresses',
+    AAAA:  'IPv6 Addresses',
+    MX:    'Mail Servers',
+    NS:    'Name Servers',
+    TXT:   'Text Records',
+    CNAME: 'Canonical Names',
+  };
+
+  async function fetchDNS(domain, type) {
+    const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} for ${type}`);
+    return resp.json();
+  }
+
+  async function lookupAll(domain) {
+    const results = {};
+    const promises = RECORD_TYPES.map(type =>
+      fetchDNS(domain, type)
+        .then(data => { results[type] = data; markTypeLoaded(type); })
+        .catch(err => { results[type] = { error: err.message }; markTypeLoaded(type); })
+    );
+    await Promise.all(promises);
+    return results;
+  }
+
+  /* ── Render Results ── */
+  function renderValue(record, type) {
+    /* Returns a DOM element for a single record row — textContent used for all DNS data */
+    const row = document.createElement('div');
+    row.className = 'record-row';
+
+    const ttl = document.createElement('span');
+    ttl.className = 'ttl-badge';
+    ttl.textContent = 'TTL ' + record.TTL;
+
+    const raw = String(record.data ?? '');
+
+    if (type === 'MX') {
+      const parts = raw.match(/^(\d+)\s+(.+)$/);
+      const priority = parts ? parts[1] : '';
+      const server   = parts ? parts[2] : raw;
+
+      const meta = document.createElement('div');
+      meta.className = 'record-meta';
+
+      if (priority) {
+        const pBadge = document.createElement('span');
+        pBadge.className = 'record-priority';
+        pBadge.textContent = 'Priority ' + priority;
+        meta.appendChild(pBadge);
+      }
+
+      const val = document.createElement('span');
+      val.className = 'record-value';
+      val.textContent = server;
+      meta.appendChild(val);
+
+      row.appendChild(ttl);
+      row.appendChild(meta);
+    } else {
+      const val = document.createElement('span');
+      val.className = 'record-value';
+      /* Strip surrounding quotes from TXT records */
+      val.textContent = type === 'TXT' ? raw.replace(/^"|"$/g, '') : raw;
+
+      row.appendChild(ttl);
+      row.appendChild(val);
+    }
+
+    return row;
+  }
+
+  function renderSection(type, data) {
+    const section = document.createElement('div');
+    section.className = 'record-section';
+    section.dataset.type = type;
+
+    /* Header */
+    const header = document.createElement('div');
+    header.className = 'section-header';
+
+    const left = document.createElement('div');
+    left.className = 'section-header-left';
+
+    const badge = document.createElement('span');
+    badge.className = 'type-badge badge-' + type;
+    badge.textContent = type;
+
+    const title = document.createElement('span');
+    title.className = 'section-title';
+    title.textContent = TYPE_DESCRIPTIONS[type] || type;
+
+    left.appendChild(badge);
+    left.appendChild(title);
+
+    const records = (!data.error && data.Status === 0 && data.Answer) ? data.Answer : [];
+    const countBadge = document.createElement('span');
+    countBadge.className = 'section-count';
+    countBadge.textContent = records.length + ' record' + (records.length !== 1 ? 's' : '');
+
+    header.appendChild(left);
+    header.appendChild(countBadge);
+    section.appendChild(header);
+
+    /* Body */
+    const body = document.createElement('div');
+    body.className = 'section-body';
+
+    if (data.error) {
+      const err = document.createElement('div');
+      err.className = 'empty-row';
+      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      icon.setAttribute('width', '14'); icon.setAttribute('height', '14');
+      icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('fill', 'none');
+      icon.setAttribute('stroke', 'currentColor'); icon.setAttribute('stroke-width', '2');
+      icon.setAttribute('stroke-linecap', 'round'); icon.setAttribute('stroke-linejoin', 'round');
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      path.setAttribute('cx', '12'); path.setAttribute('cy', '12'); path.setAttribute('r', '10');
+      icon.appendChild(path);
+      err.appendChild(icon);
+      const t = document.createElement('span');
+      t.textContent = 'Network error fetching ' + type + ' records';
+      err.appendChild(t);
+      body.appendChild(err);
+    } else if (records.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-row';
+      empty.textContent = 'No ' + type + ' records found';
+      body.appendChild(empty);
+    } else {
+      records.forEach(rec => body.appendChild(renderValue(rec, type)));
+    }
+
+    section.appendChild(body);
+    return section;
+  }
+
+  /* ── Main Lookup Handler ── */
+  document.getElementById('lookupBtn').addEventListener('click', runLookup);
+  document.getElementById('domainInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') runLookup();
+  });
+
+  async function runLookup() {
+    const input  = document.getElementById('domainInput');
+    const domain = input.value.trim().toLowerCase().replace(/\.$/, '');
+    const btn    = document.getElementById('lookupBtn');
+    const results = document.getElementById('results');
+    const summary = document.getElementById('summaryCard');
+
+    hideError();
+    summary.classList.remove('visible');
+    results.classList.remove('visible');
+    results.innerHTML = '';
+
+    if (!domain) {
+      showError('Please enter a domain name.');
+      return;
+    }
+    if (!isValidDomain(domain)) {
+      showError('Invalid domain format. Please enter a valid domain like "example.com".');
+      return;
+    }
+
+    btn.disabled = true;
+    showSpinner(RECORD_TYPES);
+
+    let allData;
+    try {
+      allData = await lookupAll(domain);
+    } catch (err) {
+      hideSpinner();
+      btn.disabled = false;
+      showError('Network error: ' + err.message);
+      return;
+    }
+
+    hideSpinner();
+    btn.disabled = false;
+
+    /* Check for NXDOMAIN (all types return Status 3) */
+    const allNXDOMAIN = RECORD_TYPES.every(t => allData[t] && allData[t].Status === 3);
+    if (allNXDOMAIN) {
+      showError('Domain not found (NXDOMAIN). "' + domain + '" does not exist in DNS.');
+      return;
+    }
+
+    /* Count totals */
+    let totalRecords = 0;
+    let typesWithRecords = 0;
+    RECORD_TYPES.forEach(t => {
+      const d = allData[t];
+      const count = (!d.error && d.Status === 0 && d.Answer) ? d.Answer.length : 0;
+      totalRecords += count;
+      if (count > 0) typesWithRecords++;
+    });
+
+    /* Summary */
+    const summaryText = document.getElementById('summaryText');
+    summaryText.innerHTML = '';
+    const strong1 = document.createElement('strong');
+    strong1.textContent = totalRecords + ' record' + (totalRecords !== 1 ? 's' : '');
+    const strong2 = document.createElement('strong');
+    strong2.textContent = typesWithRecords + ' type' + (typesWithRecords !== 1 ? 's' : '');
+    summaryText.appendChild(strong1);
+    summaryText.appendChild(document.createTextNode(' found across '));
+    summaryText.appendChild(strong2);
+    summaryText.appendChild(document.createTextNode(' for '));
+    const domainSpan = document.createElement('strong');
+    domainSpan.textContent = domain;
+    summaryText.appendChild(domainSpan);
+    summary.classList.add('visible');
+
+    /* Render sections */
+    RECORD_TYPES.forEach(type => {
+      results.appendChild(renderSection(type, allData[type]));
+    });
+
+    results.classList.add('visible');
+    applyFilter();
+
+    /* Scroll to results */
+    summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+</script>
+</body>
+</html>
