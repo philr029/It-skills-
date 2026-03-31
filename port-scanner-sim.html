@@ -409,7 +409,7 @@
     <div class="scan-progress" id="scanProgress">
       <div class="card" style="padding:24px;">
         <div class="progress-header">
-          <span class="progress-label" id="progressLabel">Initialising scan…</span>
+          <span class="progress-label" id="progressLabel">Initializing scan…</span>
           <span class="progress-pct" id="progressPct">0%</span>
         </div>
         <div class="progress-track">
@@ -635,7 +635,7 @@
     document.getElementById('startBtn').disabled = true;
     document.getElementById('stopBtn').disabled = false;
     setStats(0, 0, 0, 0);
-    setProgress(0, 'Initialising…');
+    setProgress(0, 'Initializing…');
 
     const totalPorts = portResults.length;
     const scanDuration = profile === 'full' ? 5000 : profile === 'common' ? 4000 : 2500;
