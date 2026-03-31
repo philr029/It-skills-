@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phishing Analyzer — Phil Ruttley</title>
+  <meta name="description" content="Analyze suspicious URLs and email headers for phishing indicators and risk assessment." />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep:      #0c0a15;
+      --bg-mid:       #13101f;
+      --bg-card:      rgba(19, 16, 31, 0.72);
+      --accent:       #a78bfa;
+      --accent-dark:  #8b5cf6;
+      --accent-glow:  rgba(167, 139, 250, 0.25);
+      --text-primary: #f0eaff;
+      --text-muted:   #9d8fc4;
+      --text-dim:     #5e5382;
+      --green:        #4ade80;
+      --green-bg:     rgba(74, 222, 128, 0.12);
+      --red:          #f87171;
+      --red-bg:       rgba(248, 113, 113, 0.12);
+      --yellow:       #fbbf24;
+      --yellow-bg:    rgba(251, 191, 36, 0.12);
+      --border:       rgba(167, 139, 250, 0.18);
+      --border-hover: rgba(167, 139, 250, 0.5);
+      --radius:       16px;
+      --radius-sm:    10px;
+      --transition:   0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-deep);
+      font-family: 'Syne', sans-serif;
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Navbar ── */
+    #navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(12, 10, 21, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      transition: box-shadow var(--transition);
+    }
+    #navbar.scrolled { box-shadow: 0 4px 30px rgba(0,0,0,0.4); }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      height: 64px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--text-primary);
+      text-decoration: none;
+      letter-spacing: -0.5px;
+      flex-shrink: 0;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-links {
+      display: flex;
+      gap: 28px;
+      margin-left: 8px;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color var(--transition);
+    }
+    .nav-links a:hover { color: var(--accent); }
+    .nav-cta { margin-left: auto; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 0.875rem;
+      border-radius: 50px;
+      transition: all var(--transition);
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+      color: #fff;
+      padding: 10px 24px;
+      box-shadow: 0 4px 18px rgba(139, 92, 246, 0.35);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(139, 92, 246, 0.5);
+    }
+    .btn-outline {
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      background: transparent;
+      padding: 8px 20px;
+    }
+    .btn-outline:hover {
+      border-color: var(--border-hover);
+      color: var(--accent);
+    }
+    .btn-sm { padding: 7px 16px; font-size: 0.8rem; }
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      margin-left: auto;
+    }
+    .nav-hamburger span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--text-muted);
+      border-radius: 2px;
+      transition: all var(--transition);
+    }
+    .nav-mobile {
+      display: none;
+      flex-direction: column;
+      padding: 12px 24px 16px;
+      gap: 4px;
+      border-top: 1px solid var(--border);
+    }
+    .nav-mobile a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      padding: 8px 0;
+      transition: color var(--transition);
+    }
+    .nav-mobile a:hover { color: var(--accent); }
+    .nav-mobile.open { display: flex; }
+
+    /* ── Hero / Page Header ── */
+    .page-hero {
+      padding: 60px 0 48px;
+      text-align: center;
+    }
+    .breadcrumb-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 36px;
+    }
+    .breadcrumb-back {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: color var(--transition);
+    }
+    .breadcrumb-back:hover { color: var(--accent); }
+    .page-hero h1 {
+      font-size: clamp(2rem, 5vw, 3.25rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      margin-bottom: 14px;
+    }
+    .accent { color: var(--accent); }
+    .page-hero p {
+      color: var(--text-muted);
+      max-width: 520px;
+      margin: 0 auto;
+      font-size: 1rem;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-glow);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 6px 16px;
+      font-size: 0.8rem;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    /* ── Glass Card ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 28px;
+      transition: border-color var(--transition);
+    }
+    .card:hover { border-color: var(--border-hover); }
+
+    /* ── Tabs ── */
+    .tabs-container { margin-bottom: 32px; }
+    .tab-buttons {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 12px 24px;
+      margin-bottom: -1px;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-btn:hover { color: var(--accent); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Inputs ── */
+    textarea, input[type="text"] {
+      width: 100%;
+      background: rgba(167, 139, 250, 0.06);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.9rem;
+      padding: 12px 16px;
+      resize: vertical;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      outline: none;
+    }
+    textarea:focus, input[type="text"]:focus {
+      border-color: var(--border-hover);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    textarea::placeholder, input::placeholder { color: var(--text-dim); }
+    #url-input { font-family: 'Syne Mono', monospace; font-size: 0.875rem; height: 70px; resize: none; }
+    #header-input { font-family: 'Syne Mono', monospace; font-size: 0.8rem; height: 200px; }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Example chips ── */
+    .chips-label {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      margin-top: 14px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chip {
+      background: rgba(167, 139, 250, 0.08);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: 'Syne Mono', monospace;
+      font-size: 0.72rem;
+      padding: 4px 12px;
+      transition: all var(--transition);
+    }
+    .chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    /* ── Results area ── */
+    .results-section { margin-top: 28px; animation: fadeUp 0.45s ease forwards; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Risk Gauge ── */
+    .gauge-row {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+    .gauge-wrap { position: relative; width: 150px; height: 150px; flex-shrink: 0; }
+    .gauge-wrap svg { transform: rotate(-90deg); }
+    .gauge-track { fill: none; stroke: rgba(167,139,250,0.12); stroke-width: 10; }
+    .gauge-fill {
+      fill: none;
+      stroke-width: 10;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1), stroke 0.6s;
+    }
+    .gauge-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .gauge-score {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1;
+      font-family: 'Syne', sans-serif;
+    }
+    .gauge-label { font-size: 0.7rem; color: var(--text-dim); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.1em; }
+    .verdict-info { flex: 1; min-width: 200px; }
+    .verdict-badge {
+      display: inline-block;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 6px 18px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .verdict-desc { color: var(--text-muted); font-size: 0.875rem; line-height: 1.5; }
+
+    /* ── Check list ── */
+    .checks-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+    }
+    .check-list { display: flex; flex-direction: column; gap: 8px; }
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      font-size: 0.875rem;
+      animation: fadeUp 0.3s ease forwards;
+    }
+    .check-item.pass  { background: var(--green-bg);  border-color: rgba(74,222,128,0.15); }
+    .check-item.warn  { background: var(--yellow-bg); border-color: rgba(251,191,36,0.15); }
+    .check-item.fail  { background: var(--red-bg);    border-color: rgba(248,113,113,0.15); }
+    .check-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+    .check-body { flex: 1; }
+    .check-name { font-weight: 600; }
+    .check-name.pass { color: var(--green); }
+    .check-name.warn { color: var(--yellow); }
+    .check-name.fail { color: var(--red); }
+    .check-desc { color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
+
+    /* ── URL Breakdown ── */
+    .breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .breakdown-item {
+      background: rgba(167,139,250,0.05);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+    }
+    .breakdown-key {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+    .breakdown-val {
+      font-family: 'Syne Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--accent);
+      word-break: break-all;
+    }
+    .breakdown-val.muted { color: var(--text-muted); }
+
+    /* ── Email header table ── */
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin-top: 12px;
+    }
+    .header-table th {
+      text-align: left;
+      color: var(--text-dim);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(167,139,250,0.07);
+      vertical-align: top;
+    }
+    .header-table td:first-child {
+      color: var(--accent);
+      font-family: 'Syne Mono', monospace;
+      font-size: 0.78rem;
+      white-space: nowrap;
+      width: 160px;
+    }
+    .header-table td:last-child {
+      color: var(--text-muted);
+      word-break: break-all;
+      font-family: 'Syne Mono', monospace;
+      font-size: 0.76rem;
+    }
+
+    /* ── Auth badges ── */
+    .auth-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+    .auth-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+    .auth-badge.pass { background: var(--green-bg); border-color: rgba(74,222,128,0.2); color: var(--green); }
+    .auth-badge.fail { background: var(--red-bg);   border-color: rgba(248,113,113,0.2); color: var(--red); }
+    .auth-badge.warn { background: var(--yellow-bg);border-color: rgba(251,191,36,0.2);  color: var(--yellow); }
+    .auth-badge.none { background: rgba(94,83,130,0.15); border-color: rgba(94,83,130,0.3); color: var(--text-dim); }
+
+    /* ── Section separator ── */
+    .results-sep {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 24px 0;
+    }
+    .section-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    /* ── Empty / loading states ── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-dim);
+    }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.5; }
+    .empty-state p { font-size: 0.875rem; }
+
+    /* ── Footer ── */
+    #footer {
+      background: var(--bg-mid);
+      border-top: 1px solid var(--border);
+      margin-top: 80px;
+    }
+    .footer-top {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 48px;
+      padding: 56px 0 40px;
+    }
+    .footer-logo {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+    }
+    .footer-logo span { color: var(--accent); }
+    .footer-tagline { color: var(--text-muted); font-size: 0.875rem; max-width: 300px; line-height: 1.6; }
+    .footer-col-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+    }
+    .footer-links { display: flex; flex-direction: column; gap: 10px; }
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color var(--transition);
+    }
+    .footer-links a:hover { color: var(--accent); }
+    .footer-bottom {
+      border-top: 1px solid var(--border);
+      padding: 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-copy { font-size: 0.8rem; color: var(--text-dim); }
+    .footer-status { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-muted); }
+    .footer-status-dot {
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.4); }
+      50%       { box-shadow: 0 0 0 6px rgba(74,222,128,0); }
+    }
+
+    /* ── Misc ── */
+    .main-content { padding-bottom: 60px; }
+
+    @media (max-width: 768px) {
+      .nav-links, .nav-cta { display: none; }
+      .nav-hamburger { display: flex; }
+      .footer-top { grid-template-columns: 1fr; gap: 32px; padding: 40px 0 28px; }
+      .breadcrumb-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .gauge-row { justify-content: center; }
+      .verdict-info { text-align: center; }
+    }
+    @media (max-width: 480px) {
+      .tab-btn { padding: 10px 14px; font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<nav id="navbar">
+  <div class="container nav-inner">
+    <a class="nav-logo" href="index.html">Phil<span>.</span>Ruttley</a>
+    <div class="nav-links">
+      <a href="index.html">Portfolio</a>
+      <a href="index.html#services">What I Do</a>
+      <a href="index.html#skills">Skills</a>
+      <a href="tools.html">IT Tools</a>
+      <a href="index.html#contact">Contact</a>
+    </div>
+    <a class="btn btn-primary nav-cta" href="index.html#contact">Hire Me</a>
+    <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="index.html">Portfolio</a>
+    <a href="tools.html">IT Tools</a>
+    <a href="index.html#contact">Contact</a>
+  </div>
+</nav>
+
+<!-- ── Main ── -->
+<main class="main-content">
+  <div class="container">
+
+    <!-- Hero -->
+    <div class="page-hero">
+      <div class="breadcrumb-row">
+        <a class="breadcrumb-back" href="tools.html">← All Tools</a>
+        <a class="btn btn-outline btn-sm" href="index.html">Back to Portfolio</a>
+      </div>
+      <div class="hero-badge">🛡️ Security Tool</div>
+      <h1>Phishing <span class="accent">Analyzer</span></h1>
+      <p>Paste a suspicious URL or email header to detect phishing red flags and get a risk assessment.</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-container">
+      <div class="tab-buttons">
+        <button class="tab-btn active" data-tab="url">🔗 URL Analysis</button>
+        <button class="tab-btn" data-tab="email">📧 Email Header Analysis</button>
+      </div>
+
+      <!-- URL Tab -->
+      <div class="tab-panel active" id="tab-url">
+        <div class="card">
+          <label for="url-input" class="section-label">Suspicious URL</label>
+          <textarea id="url-input" spellcheck="false" placeholder="Paste suspicious URL here, e.g. http://paypa1-secure-login.tk/verify"></textarea>
+          <div class="input-row">
+            <button class="btn btn-primary" id="analyze-url-btn">Analyze URL</button>
+            <button class="btn btn-outline" id="clear-url-btn">Clear</button>
+          </div>
+          <div class="chips-label">Try an example:</div>
+          <div class="chips" id="url-chips"></div>
+        </div>
+
+        <div id="url-results"></div>
+      </div>
+
+      <!-- Email Header Tab -->
+      <div class="tab-panel" id="tab-email">
+        <div class="card">
+          <label for="header-input" class="section-label">Raw Email Headers</label>
+          <textarea id="header-input" spellcheck="false" placeholder="Paste raw email headers here…&#10;e.g. Received: from mail.example.com...&#10;    Authentication-Results: spf=fail..."></textarea>
+          <div class="input-row">
+            <button class="btn btn-primary" id="analyze-header-btn">Analyze Headers</button>
+            <button class="btn btn-outline" id="load-sample-btn">Load Sample Headers</button>
+            <button class="btn btn-outline" id="clear-header-btn">Clear</button>
+          </div>
+        </div>
+
+        <div id="email-results"></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ── Footer ── -->
+<footer id="footer">
+  <div class="container">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">Phil<span>.</span>Ruttley</div>
+        <div class="footer-tagline">IT Support &amp; Systems Engineer — Microsoft 365, Cybersecurity, Automation.</div>
+      </div>
+      <div>
+        <div class="footer-col-title">Navigation</div>
+        <div class="footer-links">
+          <a href="index.html">Portfolio</a>
+          <a href="tools.html">IT Tools Hub</a>
+          <a href="index.html#contact">Contact</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">More Tools</div>
+        <div class="footer-links">
+          <a href="ip-checker.html">IP Checker</a>
+          <a href="domain-security.html">Domain Security</a>
+          <a href="password-generator.html">Password Generator</a>
+          <a href="subnet-calculator.html">Subnet Calculator</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2026 Phil Ruttley. All rights reserved.</div>
+      <div class="footer-status"><span class="footer-status-dot"></span>All systems operational</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ─────────────── Navbar ─────────────── */
+  const navbar    = document.getElementById('navbar');
+  const hamburger = document.getElementById('hamburger');
+  const navMobile = document.getElementById('navMobile');
+
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 20);
+  });
+
+  hamburger.addEventListener('click', () => {
+    navMobile.classList.toggle('open');
+  });
+
+  /* ─────────────── Tabs ─────────────── */
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  /* ─────────────── Example URL chips ─────────────── */
+  const EXAMPLE_URLS = [
+    'http://paypa1-secure-login.tk/verify/account',
+    'https://bit.ly/3xAmPl3',
+    'http://192.168.1.1/admin/login.php',
+    'https://secure-bank-update.xyz/customer/account/confirm',
+    'https://xn--pple-43d.com/id/login',
+    'http://login.verify.update.account.microsoft-support.net/secure',
+    'https://google.com',
+    'https://amaz0n-order-confirm.top/signin?redirect=account',
+  ];
+
+  const chipsEl = document.getElementById('url-chips');
+  EXAMPLE_URLS.forEach(url => {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.textContent = url.length > 48 ? url.slice(0, 46) + '…' : url;
+    chip.title = url;
+    chip.addEventListener('click', () => {
+      document.getElementById('url-input').value = url;
+    });
+    chipsEl.appendChild(chip);
+  });
+
+  /* ─────────────── URL ANALYSIS ─────────────── */
+  const SUSPICIOUS_TLDS    = ['.tk','.ml','.ga','.cf','.gq','.xyz','.top','.club','.work','.site','.online'];
+  const SHORTENERS         = ['bit.ly','tinyurl.com','t.co','goo.gl','ow.ly','is.gd','buff.ly','rebrand.ly','cutt.ly'];
+  const BRAND_PATTERNS     = [
+    { brand:'paypal',  re:/paypa[1l][^.]*\./i },
+    { brand:'google',  re:/g[o0]{2}g[l1]e[^.]*\./i },
+    { brand:'microsoft',re:/micros[o0]ft[^.]*\./i },
+    { brand:'amazon',  re:/ama[zz][o0]n[^.]*\.|amaz[o0]n[^.]*\./i },
+    { brand:'facebook',re:/faceb[o0]{2}k[^.]*\./i },
+    { brand:'apple',   re:/app[1l]e[^.]*\./i },
+    { brand:'netflix', re:/netfl[i1]x[^.]*\./i },
+    { brand:'chase',   re:/cha[s5]e[^.]*\./i },
+    { brand:'wells fargo',re:/well[s5]fargo[^.]*\./i },
+  ];
+  const SENSITIVE_KEYWORDS = ['login','password','bank','paypal','account','secure','verify','update','signin','credential'];
+  const PATH_KEYWORDS      = ['login','secure','account','verify','update','bank','password','signin'];
+
+  function analyzeURL(rawURL) {
+    const checks = [];
+    let score = 0;
+
+    /* parse */
+    let parsed = null;
+    try {
+      const urlStr = /^https?:\/\//i.test(rawURL) ? rawURL : 'http://' + rawURL;
+      parsed = new URL(urlStr);
+    } catch (_) {
+      return { error: 'Invalid URL — could not parse.' };
+    }
+
+    const protocol = parsed.protocol;
+    const hostname = parsed.hostname.toLowerCase();
+    const fullPath = (parsed.pathname + parsed.search).toLowerCase();
+    const fullURL  = rawURL.toLowerCase();
+
+    /* 1 — Protocol */
+    if (protocol === 'http:') {
+      score += 10;
+      checks.push({ name: 'Insecure Protocol (HTTP)', status: 'warn', desc: 'Connection is unencrypted. Legitimate services use HTTPS.' });
+    } else {
+      checks.push({ name: 'Secure Protocol (HTTPS)', status: 'pass', desc: 'Uses encrypted HTTPS connection.' });
+    }
+
+    /* 2 — Suspicious TLD */
+    const tldMatch = SUSPICIOUS_TLDS.find(t => hostname.endsWith(t));
+    if (tldMatch) {
+      score += 20;
+      checks.push({ name: 'Suspicious TLD', status: 'fail', desc: `Domain uses "${tldMatch}" — a free TLD frequently abused in phishing campaigns.` });
+    } else {
+      checks.push({ name: 'TLD Check', status: 'pass', desc: 'Top-level domain is not on the high-risk free TLD list.' });
+    }
+
+    /* 3 — Typosquatting */
+    const brandHit = BRAND_PATTERNS.find(b => b.re.test(hostname));
+    if (brandHit) {
+      score += 25;
+      checks.push({ name: 'Typosquatting Detected', status: 'fail', desc: `Domain resembles "${brandHit.brand}" with character substitutions — classic impersonation technique.` });
+    } else {
+      checks.push({ name: 'Brand Impersonation', status: 'pass', desc: 'No obvious brand name substitution patterns found in domain.' });
+    }
+
+    /* 4 — URL shortener */
+    const shortHit = SHORTENERS.find(s => hostname === s || hostname.endsWith('.' + s));
+    if (shortHit) {
+      score += 15;
+      checks.push({ name: 'URL Shortener Detected', status: 'warn', desc: `"${shortHit}" masks the real destination — cannot assess final URL without following redirect.` });
+    } else {
+      checks.push({ name: 'URL Shortener', status: 'pass', desc: 'No known URL-shortening service detected.' });
+    }
+
+    /* 5 — Excessive subdomains */
+    const parts = hostname.split('.');
+    const subCount = parts.length - 2;
+    if (subCount >= 3) {
+      score += 18;
+      checks.push({ name: 'Excessive Subdomains', status: 'fail', desc: `${subCount} subdomain levels detected. Phishing pages often use deep subdomain chains to hide the real domain.` });
+    } else if (subCount === 2) {
+      score += 6;
+      checks.push({ name: 'Multiple Subdomains', status: 'warn', desc: 'Two subdomain levels — slightly unusual, verify the root domain.' });
+    } else {
+      checks.push({ name: 'Subdomain Structure', status: 'pass', desc: 'Normal subdomain depth.' });
+    }
+
+    /* 6 — IP address in URL */
+    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+    if (ipPattern.test(hostname)) {
+      score += 22;
+      checks.push({ name: 'IP Address in URL', status: 'fail', desc: 'URL uses a raw IP address instead of a domain name — strong phishing indicator.' });
+    } else {
+      checks.push({ name: 'Domain Name (Not IP)', status: 'pass', desc: 'URL uses a domain name rather than a raw IP address.' });
+    }
+
+    /* 7 — Long URL */
+    if (rawURL.length > 100) {
+      const pts = Math.min(12, Math.floor((rawURL.length - 100) / 20) * 4);
+      score += pts;
+      checks.push({ name: 'Unusually Long URL', status: 'warn', desc: `URL is ${rawURL.length} characters. Long URLs can be used to hide malicious parameters.` });
+    } else {
+      checks.push({ name: 'URL Length', status: 'pass', desc: `URL length is ${rawURL.length} characters — within normal range.` });
+    }
+
+    /* 8 — Misleading path keywords */
+    const pathKeyHit = PATH_KEYWORDS.find(k => fullPath.includes(k));
+    const rootDomain = parts.slice(-2).join('.');
+    const trustedDomains = ['google.com','microsoft.com','apple.com','amazon.com','paypal.com','facebook.com','instagram.com','twitter.com','linkedin.com','github.com','netflix.com'];
+    if (pathKeyHit && !trustedDomains.includes(rootDomain)) {
+      score += 12;
+      checks.push({ name: 'Sensitive Path Keywords', status: 'warn', desc: `Path contains "${pathKeyHit}" on an unfamiliar domain — may mimic a login/verification page.` });
+    } else {
+      checks.push({ name: 'Path Keywords', status: 'pass', desc: 'No suspicious login/verification keywords in path, or domain is trusted.' });
+    }
+
+    /* 9 — Punycode / IDN */
+    if (hostname.includes('xn--')) {
+      score += 20;
+      checks.push({ name: 'Punycode / IDN Domain', status: 'fail', desc: 'Punycode encoding (xn--) detected — may be a homograph attack using look-alike Unicode characters.' });
+    } else {
+      checks.push({ name: 'Punycode / IDN', status: 'pass', desc: 'No Punycode encoding detected in hostname.' });
+    }
+
+    /* 10 — Multiple hyphens in domain */
+    const domainNoTLD = parts.slice(0, -1).join('.');
+    const hyphenCount = (domainNoTLD.match(/-/g) || []).length;
+    if (hyphenCount >= 2) {
+      score += 12;
+      checks.push({ name: 'Multiple Hyphens in Domain', status: 'warn', desc: `Domain contains ${hyphenCount} hyphens — phishing domains often use hyphens to string together brand keywords.` });
+    } else {
+      checks.push({ name: 'Hyphen Count', status: 'pass', desc: 'Domain does not contain an excessive number of hyphens.' });
+    }
+
+    /* 11 — HTTP + sensitive keywords */
+    if (protocol === 'http:' && SENSITIVE_KEYWORDS.some(k => fullURL.includes(k))) {
+      score += 15;
+      checks.push({ name: 'HTTP + Sensitive Keywords', status: 'fail', desc: 'URL uses plain HTTP while containing sensitive keywords (login/bank/account) — credentials would be sent in cleartext.' });
+    } else {
+      checks.push({ name: 'Protocol + Keyword Safety', status: 'pass', desc: 'No combination of insecure protocol with sensitive keywords detected.' });
+    }
+
+    /* 12 — Random-looking domain */
+    const domainLabel = parts[parts.length - 2] || '';
+    const isRandomLooking = domainLabel.length > 12 && /^[a-z0-9]+$/i.test(domainLabel) && !/[aeiou]{2}/i.test(domainLabel);
+    if (isRandomLooking) {
+      score += 8;
+      checks.push({ name: 'Random-Looking Domain', status: 'warn', desc: `"${domainLabel}" looks algorithmically generated — common in fast-flux phishing infrastructure.` });
+    } else {
+      checks.push({ name: 'Domain Appearance', status: 'pass', desc: 'Domain does not match patterns of algorithmically generated names.' });
+    }
+
+    score = Math.min(100, Math.max(0, score));
+
+    return {
+      score,
+      checks,
+      parsed: {
+        protocol: protocol.replace(':','').toUpperCase(),
+        host:     parsed.hostname,
+        path:     parsed.pathname || '/',
+        query:    parsed.search   || '—',
+        hash:     parsed.hash     || '—',
+        port:     parsed.port     || '(default)',
+      }
+    };
+  }
+
+  function verdictFromScore(score) {
+    if (score <= 25) return { label: 'Safe',       color: '#4ade80', bg: 'var(--green-bg)',  desc: 'No significant phishing indicators detected. URL appears legitimate.' };
+    if (score <= 45) return { label: 'Low Risk',   color: '#86efac', bg: 'rgba(134,239,172,0.12)', desc: 'Minor concerns found. Exercise caution and verify the source before interacting.' };
+    if (score <= 70) return { label: 'Suspicious', color: '#fbbf24', bg: 'var(--yellow-bg)', desc: 'Multiple suspicious characteristics detected. Do not enter credentials on this page.' };
+    if (score <= 85) return { label: 'High Risk',  color: '#fb923c', bg: 'rgba(251,146,60,0.12)', desc: 'Strong phishing indicators present. Avoid this URL and report it if received via email.' };
+    return             { label: 'Phishing',   color: '#f87171', bg: 'var(--red-bg)',   desc: 'Extremely high probability of phishing. Do NOT visit this URL.' };
+  }
+
+  function renderGauge(score, verdict) {
+    const r  = 60;
+    const cx = 75;
+    const cy = 75;
+    const circumference = 2 * Math.PI * r;
+    const id = 'gauge-' + Date.now();
+
+    return `
+      <div class="gauge-wrap" id="${id}">
+        <svg width="150" height="150" viewBox="0 0 150 150">
+          <circle class="gauge-track" cx="${cx}" cy="${cy}" r="${r}" />
+          <circle class="gauge-fill" id="${id}-fill"
+            cx="${cx}" cy="${cy}" r="${r}"
+            stroke="${verdict.color}"
+            stroke-dasharray="${circumference}"
+            stroke-dashoffset="${circumference}"
+          />
+        </svg>
+        <div class="gauge-center">
+          <span class="gauge-score" id="${id}-score" style="color:${verdict.color}">0</span>
+          <span class="gauge-label">Risk Score</span>
+        </div>
+      </div>`;
+  }
+
+  function animateGauge(score, verdict, idBase) {
+    const r = 60;
+    const circumference = 2 * Math.PI * r;
+    const fill  = document.getElementById(idBase + '-fill');
+    const scoreEl = document.getElementById(idBase + '-score');
+    const target  = circumference - (score / 100) * circumference;
+
+    requestAnimationFrame(() => {
+      if (fill) fill.style.strokeDashoffset = target;
+    });
+
+    let current = 0;
+    const step = () => {
+      current = Math.min(current + 2, score);
+      if (scoreEl) scoreEl.textContent = current;
+      if (current < score) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  function renderURLResults(result) {
+    if (result.error) {
+      return `<div class="card results-section"><p style="color:var(--red)">${result.error}</p></div>`;
+    }
+    const { score, checks, parsed } = result;
+    const verdict = verdictFromScore(score);
+    const gaugeId = 'gauge-' + Date.now();
+    const r  = 60, cx = 75, cy = 75;
+    const circumference = 2 * Math.PI * r;
+
+    const checksHTML = checks.map(c => `
+      <div class="check-item ${c.status}">
+        <span class="check-icon">${c.status === 'pass' ? '✅' : c.status === 'warn' ? '⚠️' : '❌'}</span>
+        <div class="check-body">
+          <div class="check-name ${c.status}">${c.name}</div>
+          <div class="check-desc">${c.desc}</div>
+        </div>
+      </div>`).join('');
+
+    const breakdownHTML = Object.entries(parsed).map(([k, v]) => `
+      <div class="breakdown-item">
+        <div class="breakdown-key">${k}</div>
+        <div class="breakdown-val ${v === '—' ? 'muted' : ''}">${v}</div>
+      </div>`).join('');
+
+    return `
+      <div class="card results-section">
+        <div class="gauge-row">
+          <div class="gauge-wrap" id="${gaugeId}">
+            <svg width="150" height="150" viewBox="0 0 150 150">
+              <circle class="gauge-track" cx="${cx}" cy="${cy}" r="${r}" />
+              <circle class="gauge-fill" id="${gaugeId}-fill"
+                cx="${cx}" cy="${cy}" r="${r}"
+                stroke="${verdict.color}"
+                stroke-dasharray="${circumference}"
+                stroke-dashoffset="${circumference}" />
+            </svg>
+            <div class="gauge-center">
+              <span class="gauge-score" id="${gaugeId}-score" style="color:${verdict.color}">0</span>
+              <span class="gauge-label">Risk Score</span>
+            </div>
+          </div>
+          <div class="verdict-info">
+            <div class="verdict-badge" style="background:${verdict.bg};color:${verdict.color};border:1px solid ${verdict.color}33">
+              ${verdict.label}
+            </div>
+            <div class="verdict-desc">${verdict.desc}</div>
+          </div>
+        </div>
+
+        <hr class="results-sep" />
+        <div class="section-label">Analysis Checks (${checks.filter(c=>c.status==='fail').length} failed · ${checks.filter(c=>c.status==='warn').length} warnings · ${checks.filter(c=>c.status==='pass').length} passed)</div>
+        <div class="check-list">${checksHTML}</div>
+
+        <hr class="results-sep" />
+        <div class="section-label">URL Breakdown</div>
+        <div class="breakdown-grid">${breakdownHTML}</div>
+      </div>`;
+  }
+
+  document.getElementById('analyze-url-btn').addEventListener('click', () => {
+    const raw = document.getElementById('url-input').value.trim();
+    if (!raw) return;
+    const result = analyzeURL(raw);
+    const container = document.getElementById('url-results');
+    container.innerHTML = renderURLResults(result);
+    if (!result.error) {
+      const verdict = verdictFromScore(result.score);
+      const gaugeId = container.querySelector('.gauge-wrap').id;
+      setTimeout(() => animateGauge(result.score, verdict, gaugeId), 80);
+    }
+    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  document.getElementById('clear-url-btn').addEventListener('click', () => {
+    document.getElementById('url-input').value = '';
+    document.getElementById('url-results').innerHTML = '';
+  });
+
+  /* ─────────────── EMAIL HEADER ANALYSIS ─────────────── */
+  const SAMPLE_HEADERS = `Received: from mail-evil.phish-domain.tk (mail-evil.phish-domain.tk [198.51.100.42])
+        by mx.victim.com with ESMTP id x7si123456abc
+        for <victim@victim.com>; Mon, 14 Apr 2025 08:22:11 -0700 (PDT)
+Received: from localhost (localhost [127.0.0.1])
+        by mail-evil.phish-domain.tk with ESMTP id a1bc23def456
+        Mon, 14 Apr 2025 15:22:10 +0000
+Received: from smtp.bulkmailer.net (smtp.bulkmailer.net [203.0.113.77])
+        by localhost with SMTP id z9zy88zz
+        Mon, 14 Apr 2025 15:22:09 +0000
+Received: from attacker-pc (unknown [45.33.32.156])
+        by smtp.bulkmailer.net with SMTP
+        Mon, 14 Apr 2025 15:22:07 +0000
+Authentication-Results: mx.victim.com;
+       spf=fail (google.com: domain of noreply@paypa1-secure.tk does not designate 198.51.100.42 as permitted sender) smtp.mailfrom=noreply@paypa1-secure.tk;
+       dkim=none (message not signed);
+       dmarc=fail (p=REJECT) header.from=paypal.com
+Return-Path: <noreply@paypa1-secure.tk>
+From: "PayPal Security" <security@paypal.com>
+Reply-To: collect-data@attacker-harvest.ml
+To: victim@victim.com
+Subject: URGENT: Your account has been suspended — verify immediately
+Date: Mon, 14 Apr 2025 15:22:05 +0000
+Message-ID: <20250414152205.A1B2C3@paypa1-secure.tk>
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+X-Mailer: PhpMailer 5.2 (bulk)
+X-Spam-Status: Yes, score=8.4`;
+
+  document.getElementById('load-sample-btn').addEventListener('click', () => {
+    document.getElementById('header-input').value = SAMPLE_HEADERS;
+  });
+
+  document.getElementById('clear-header-btn').addEventListener('click', () => {
+    document.getElementById('header-input').value = '';
+    document.getElementById('email-results').innerHTML = '';
+  });
+
+  function parseHeaderField(headers, fieldName) {
+    const re = new RegExp('^' + fieldName + ':\\s*(.+?)(?=\\n[^\\s]|$)', 'ims');
+    const m  = headers.match(re);
+    return m ? m[1].replace(/\s+/g, ' ').trim() : null;
+  }
+
+  function extractEmailDomain(emailStr) {
+    if (!emailStr) return null;
+    const m = emailStr.match(/<([^>]+)>/) || emailStr.match(/([^\s@]+@([^\s>]+))/);
+    const addr = m ? m[1] : emailStr;
+    const parts = addr.split('@');
+    return parts.length === 2 ? parts[1].trim().toLowerCase() : null;
+  }
+
+  function analyzeHeaders(raw) {
+    const checks = [];
+    let score = 0;
+
+    /* Parse key fields */
+    const fromField       = parseHeaderField(raw, 'From');
+    const replyToField    = parseHeaderField(raw, 'Reply-To');
+    const returnPathField = parseHeaderField(raw, 'Return-Path');
+    const subjectField    = parseHeaderField(raw, 'Subject');
+    const dateField       = parseHeaderField(raw, 'Date');
+    const xMailerField    = parseHeaderField(raw, 'X-Mailer');
+    const authResults     = parseHeaderField(raw, 'Authentication-Results');
+
+    const parsedFields = [
+      { key: 'From',           val: fromField },
+      { key: 'Reply-To',       val: replyToField },
+      { key: 'Return-Path',    val: returnPathField },
+      { key: 'Subject',        val: subjectField },
+      { key: 'Date',           val: dateField },
+      { key: 'X-Mailer',       val: xMailerField },
+      { key: 'Authentication-Results', val: authResults },
+    ].filter(f => f.val);
+
+    /* 1 — SPF */
+    let spfResult = 'none';
+    if (authResults) {
+      if (/spf=pass/i.test(authResults))     spfResult = 'pass';
+      else if (/spf=fail/i.test(authResults)) spfResult = 'fail';
+      else if (/spf=softfail/i.test(authResults)) spfResult = 'softfail';
+      else if (/spf=none/i.test(authResults))  spfResult = 'none';
+    }
+    const spfMap = { pass:{s:'pass',pts:0}, fail:{s:'fail',pts:20}, softfail:{s:'warn',pts:12}, none:{s:'warn',pts:8} };
+    const spfInfo = spfMap[spfResult] || spfMap.none;
+    score += spfInfo.pts;
+    checks.push({ name: `SPF: ${spfResult.toUpperCase()}`, status: spfInfo.s, desc: spfResult === 'pass' ? 'Sending server is authorised to send on behalf of the domain.' : spfResult === 'fail' ? 'Sending server is NOT authorised — strong forgery indicator.' : spfResult === 'softfail' ? 'Soft SPF failure — server is not explicitly authorised.' : 'No SPF record found for sending domain.' });
+
+    /* 2 — DKIM */
+    let dkimResult = 'none';
+    if (authResults) {
+      if (/dkim=pass/i.test(authResults))  dkimResult = 'pass';
+      else if (/dkim=fail/i.test(authResults)) dkimResult = 'fail';
+      else if (/dkim=none/i.test(authResults)) dkimResult = 'none';
+    }
+    const dkimMap = { pass:{s:'pass',pts:0}, fail:{s:'fail',pts:18}, none:{s:'warn',pts:8} };
+    const dkimInfo = dkimMap[dkimResult] || dkimMap.none;
+    score += dkimInfo.pts;
+    checks.push({ name: `DKIM: ${dkimResult.toUpperCase()}`, status: dkimInfo.s, desc: dkimResult === 'pass' ? 'Email cryptographic signature verified — message not tampered with.' : dkimResult === 'fail' ? 'DKIM signature verification failed — message may have been modified.' : 'Message has no DKIM signature.' });
+
+    /* 3 — DMARC */
+    let dmarcResult = 'none';
+    if (authResults) {
+      if (/dmarc=pass/i.test(authResults))  dmarcResult = 'pass';
+      else if (/dmarc=fail/i.test(authResults)) dmarcResult = 'fail';
+      else if (/dmarc=none/i.test(authResults)) dmarcResult = 'none';
+    }
+    const dmarcMap = { pass:{s:'pass',pts:0}, fail:{s:'fail',pts:22}, none:{s:'warn',pts:8} };
+    const dmarcInfo = dmarcMap[dmarcResult] || dmarcMap.none;
+    score += dmarcInfo.pts;
+    checks.push({ name: `DMARC: ${dmarcResult.toUpperCase()}`, status: dmarcInfo.s, desc: dmarcResult === 'pass' ? 'DMARC policy check passed — From domain alignment confirmed.' : dmarcResult === 'fail' ? 'DMARC check FAILED — From domain does not align with authenticated domain.' : 'No DMARC policy found for the sending domain.' });
+
+    /* 4 — Return-Path vs From mismatch */
+    const fromDomain = extractEmailDomain(fromField);
+    const rpDomain   = extractEmailDomain(returnPathField);
+    if (fromDomain && rpDomain) {
+      if (fromDomain !== rpDomain) {
+        score += 18;
+        checks.push({ name: 'Return-Path / From Mismatch', status: 'fail', desc: `From domain "${fromDomain}" does not match Return-Path domain "${rpDomain}" — classic email spoofing pattern.` });
+      } else {
+        checks.push({ name: 'Return-Path / From Match', status: 'pass', desc: `Both From and Return-Path use the same domain "${fromDomain}".` });
+      }
+    } else {
+      checks.push({ name: 'Return-Path / From Check', status: 'warn', desc: 'Could not fully parse From or Return-Path headers for comparison.' });
+      score += 5;
+    }
+
+    /* 5 — Reply-To mismatch */
+    const replyToDomain = extractEmailDomain(replyToField);
+    if (replyToDomain && fromDomain && replyToDomain !== fromDomain) {
+      score += 15;
+      checks.push({ name: 'Reply-To Domain Mismatch', status: 'fail', desc: `Replies would go to "${replyToDomain}" instead of "${fromDomain}" — harvesting tactic.` });
+    } else if (!replyToField) {
+      checks.push({ name: 'Reply-To Header', status: 'pass', desc: 'No separate Reply-To header — replies go directly to sender.' });
+    } else {
+      checks.push({ name: 'Reply-To Consistent', status: 'pass', desc: 'Reply-To domain matches From domain.' });
+    }
+
+    /* 6 — Received hops */
+    const hops = (raw.match(/^Received:/gim) || []).length;
+    if (hops >= 5) {
+      score += 14;
+      checks.push({ name: `Received Hops: ${hops} (High)`, status: 'fail', desc: `${hops} Received headers detected. Excessive relaying can indicate spam infrastructure or routing obfuscation.` });
+    } else if (hops >= 3) {
+      score += 6;
+      checks.push({ name: `Received Hops: ${hops} (Moderate)`, status: 'warn', desc: `${hops} Received headers — slightly elevated relay count.` });
+    } else {
+      checks.push({ name: `Received Hops: ${hops}`, status: 'pass', desc: `${hops} relay hop${hops === 1 ? '' : 's'} — within normal range.` });
+    }
+
+    /* 7 — X-Mailer */
+    const suspiciousMailers = ['phpmailer','sendblaster','massmailer','bulkmail','mailchimp','sendinblue','constant contact','mailgun','sendgrid','elasticemail','pepipost'];
+    if (xMailerField) {
+      const mailerLow = xMailerField.toLowerCase();
+      const mailerHit = suspiciousMailers.find(m => mailerLow.includes(m));
+      if (mailerHit && ['phpmailer','sendblaster','massmailer','bulkmail'].includes(mailerHit)) {
+        score += 10;
+        checks.push({ name: 'Suspicious X-Mailer', status: 'warn', desc: `X-Mailer header reveals "${xMailerField}" — a tool commonly used in mass-phishing campaigns.` });
+      } else if (mailerHit) {
+        checks.push({ name: 'Bulk Email Platform X-Mailer', status: 'warn', desc: `X-Mailer indicates bulk email platform "${xMailerField}". Not inherently malicious but warrants scrutiny.` });
+        score += 5;
+      } else {
+        checks.push({ name: 'X-Mailer', status: 'pass', desc: `X-Mailer: "${xMailerField}" — no immediate concerns.` });
+      }
+    } else {
+      checks.push({ name: 'X-Mailer Header', status: 'pass', desc: 'No X-Mailer header present — or stripped by receiving server.' });
+    }
+
+    /* 8 — Date validation */
+    if (dateField) {
+      const sentDate = new Date(dateField);
+      const now = new Date();
+      if (isNaN(sentDate.getTime())) {
+        score += 8;
+        checks.push({ name: 'Invalid Date Header', status: 'warn', desc: `Could not parse date "${dateField}" — malformed date headers are a spam indicator.` });
+      } else {
+        const diffDays = (now - sentDate) / 86400000;
+        if (diffDays < -1) {
+          score += 15;
+          checks.push({ name: 'Future Date Detected', status: 'fail', desc: `Email is dated ${Math.abs(diffDays).toFixed(0)} day(s) in the future — likely manipulated.` });
+        } else if (diffDays > 30) {
+          score += 6;
+          checks.push({ name: 'Old Email Date', status: 'warn', desc: `Email date is ${diffDays.toFixed(0)} days in the past — may be a re-used or replayed message.` });
+        } else {
+          checks.push({ name: 'Date Valid', status: 'pass', desc: `Email dated ${sentDate.toDateString()} — within acceptable range.` });
+        }
+      }
+    } else {
+      checks.push({ name: 'Date Header', status: 'warn', desc: 'No Date header found.' });
+      score += 4;
+    }
+
+    /* 9 — Subject urgency */
+    const urgencyWords = ['urgent','immediately','verify your','suspended','limited','unusual activity','action required','account locked','confirm your','validate','unusual sign','security alert','you have been'];
+    if (subjectField) {
+      const subjLow = subjectField.toLowerCase();
+      const urgencyHit = urgencyWords.filter(w => subjLow.includes(w));
+      if (urgencyHit.length >= 2) {
+        score += 14;
+        checks.push({ name: 'High-Urgency Subject', status: 'fail', desc: `Subject contains ${urgencyHit.length} urgency phrases: "${urgencyHit.join('", "')}" — designed to provoke a panicked, thoughtless response.` });
+      } else if (urgencyHit.length === 1) {
+        score += 7;
+        checks.push({ name: 'Urgency Keyword in Subject', status: 'warn', desc: `Subject contains the urgency phrase "${urgencyHit[0]}" — a common social engineering tactic.` });
+      } else {
+        checks.push({ name: 'Subject Line', status: 'pass', desc: 'No urgency manipulation keywords detected in subject line.' });
+      }
+    } else {
+      checks.push({ name: 'Subject Header', status: 'warn', desc: 'No Subject header found.' });
+    }
+
+    score = Math.min(100, Math.max(0, score));
+
+    return { score, checks, parsedFields, spfResult, dkimResult, dmarcResult };
+  }
+
+  function renderEmailResults(result) {
+    if (result.error) {
+      return `<div class="card results-section"><p style="color:var(--red)">${result.error}</p></div>`;
+    }
+    const { score, checks, parsedFields, spfResult, dkimResult, dmarcResult } = result;
+    const verdict = verdictFromScore(score);
+
+    const authBadge = (label, val) => {
+      const cls = val === 'pass' ? 'pass' : (val === 'fail' ? 'fail' : val === 'none' ? 'none' : 'warn');
+      const icon = val === 'pass' ? '✅' : val === 'fail' ? '❌' : '⚠️';
+      return `<span class="auth-badge ${cls}">${icon} ${label}: ${val.toUpperCase()}</span>`;
+    };
+
+    const tableRows = parsedFields.map(f => `
+      <tr>
+        <td>${f.key}</td>
+        <td>${f.val.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
+      </tr>`).join('');
+
+    const checksHTML = checks.map(c => `
+      <div class="check-item ${c.status}">
+        <span class="check-icon">${c.status === 'pass' ? '✅' : c.status === 'warn' ? '⚠️' : '❌'}</span>
+        <div class="check-body">
+          <div class="check-name ${c.status}">${c.name}</div>
+          <div class="check-desc">${c.desc}</div>
+        </div>
+      </div>`).join('');
+
+    const r = 60, cx = 75, cy = 75;
+    const circumference = 2 * Math.PI * r;
+    const gaugeId = 'gauge-' + Date.now();
+
+    return `
+      <div class="card results-section">
+        <div class="gauge-row">
+          <div class="gauge-wrap" id="${gaugeId}">
+            <svg width="150" height="150" viewBox="0 0 150 150">
+              <circle class="gauge-track" cx="${cx}" cy="${cy}" r="${r}" />
+              <circle class="gauge-fill" id="${gaugeId}-fill"
+                cx="${cx}" cy="${cy}" r="${r}"
+                stroke="${verdict.color}"
+                stroke-dasharray="${circumference}"
+                stroke-dashoffset="${circumference}" />
+            </svg>
+            <div class="gauge-center">
+              <span class="gauge-score" id="${gaugeId}-score" style="color:${verdict.color}">0</span>
+              <span class="gauge-label">Risk Score</span>
+            </div>
+          </div>
+          <div class="verdict-info">
+            <div class="verdict-badge" style="background:${verdict.bg};color:${verdict.color};border:1px solid ${verdict.color}33">
+              ${verdict.label}
+            </div>
+            <div class="verdict-desc">${verdict.desc}</div>
+          </div>
+        </div>
+
+        <hr class="results-sep" />
+        <div class="section-label">Authentication Summary</div>
+        <div class="auth-row">
+          ${authBadge('SPF', spfResult)}
+          ${authBadge('DKIM', dkimResult)}
+          ${authBadge('DMARC', dmarcResult)}
+        </div>
+
+        <hr class="results-sep" />
+        <div class="section-label">Parsed Header Fields</div>
+        <div style="overflow-x:auto">
+          <table class="header-table">
+            <thead><tr><th>Field</th><th>Value</th></tr></thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>
+
+        <hr class="results-sep" />
+        <div class="section-label">Risk Flags (${checks.filter(c=>c.status==='fail').length} failed · ${checks.filter(c=>c.status==='warn').length} warnings · ${checks.filter(c=>c.status==='pass').length} passed)</div>
+        <div class="check-list">${checksHTML}</div>
+      </div>`;
+  }
+
+  document.getElementById('analyze-header-btn').addEventListener('click', () => {
+    const raw = document.getElementById('header-input').value.trim();
+    if (!raw) return;
+    const result = analyzeHeaders(raw);
+    const container = document.getElementById('email-results');
+    container.innerHTML = renderEmailResults(result);
+    if (!result.error) {
+      const verdict = verdictFromScore(result.score);
+      const gaugeId = container.querySelector('.gauge-wrap').id;
+      setTimeout(() => animateGauge(result.score, verdict, gaugeId), 80);
+    }
+    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+})();
+</script>
+</body>
+</html>
