@@ -486,10 +486,9 @@
     let category = 'Residential';
     let ipType = 'Residential / Consumer';
 
-    // Datacenter ranges — higher risk baseline
+    // First-octet ranges commonly associated with cloud/datacenter hosting (AWS, GCP, Azure,
+    // OVH, Hetzner, Leaseweb, etc.) — these carry a higher base risk than residential ISPs.
     const datacenterFirst = [23, 34, 35, 52, 54, 104, 108, 130, 140, 143, 144, 149, 157, 159, 161, 163, 167, 185, 193, 194, 195, 198, 199, 207, 208, 209, 216];
-    // Known CDN / reputable infrastructure
-    const safeFirst = [1, 8, 8, 9, 104, 172, 192, 208];
     const knownSafe = [
       [8,8,8,8],[8,8,4,4],[1,1,1,1],[1,0,0,1],[9,9,9,9],
       [208,67,222,222],[208,67,220,220],[172,217,0,0]
